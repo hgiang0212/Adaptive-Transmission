@@ -2,9 +2,9 @@
 #include <WiFiUdp.h>
 
 // ===== CẤU HÌNH MẠNG =====
-const char* ssid = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
-IPAddress rpiIP(192, 168, 1, 100);    // Địa chỉ IP của RPi
+const char* ssid = "P 201";
+const char* password = "66668888";
+IPAddress rpiIP(192, 168, 1, 238);  // Địa chỉ IP của RPi
 const unsigned int rpiPort = 4444;      // Cổng RPi nhận dữ liệu
 const unsigned int localPort = 5555;    // Cổng ESP32 nhận ACK
 
@@ -14,7 +14,7 @@ WiFiUDP udp;
 const unsigned long WINDOW_MS = 1000;   // Cửa sổ 1 giây
 const unsigned long ACK_TIMEOUT_MS = 100; // Timeout chờ ACK
 
-// --- ĐÃ CẬP NHẬT: 10 gói tin mỗi cửa sổ ---
+// --- ĐÃ CẬP NHẬT: 50 gói tin mỗi cửa sổ ---
 const int PACKETS_PER_WINDOW = 50;
 
 const int PAYLOAD_SIZE_SEND = 64;       // Kích thước payload khi SEND
