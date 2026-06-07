@@ -1,4 +1,4 @@
-#include <WiFi.h>
+#include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 
 // ===== CẤU HÌNH MẠNG =====
@@ -11,28 +11,27 @@ const unsigned int localPort = 5555;    // Cổng ESP32 nhận ACK
 WiFiUDP udp;
 
 // ===== THAM SỐ HỆ THỐNG =====
-const unsigned long WINDOW_MS = 1000;   // Cửa sổ 1 giây
+const unsigned long WINDOW_MS = 2000;   // Cửa sổ 1 giây
 const unsigned long ACK_TIMEOUT_MS = 100; // Timeout chờ ACK
 
-// --- ĐÃ CẬP NHẬT: 50 gói tin mỗi cửa sổ ---
 const int PACKETS_PER_WINDOW = 50;
 
 const int PAYLOAD_SIZE_SEND = 64;       // Kích thước payload khi SEND
 const int PAYLOAD_SIZE_COMPRESS = 32;   // Kích thước payload khi COMPRESS
 
-// Cấu hình đồng bộ định kỳ (5 phút = 300000 ms)
 const unsigned long SYNC_INTERVAL_MS = 300000;
 unsigned long lastSyncTime = 0;
 
 // ===== TRẠNG THÁI HOẠT ĐỘNG =====
 enum Decision { SEND = 0, COMPRESS = 1, WAIT = 2 };
-Decision currentDecision = SEND;        // Quyết định hiện tại, mặc định SEND
-unsigned int windowID = 0;              // ID của cửa sổ, tăng dần
+Decision currentDecision = SEND;
+unsigned int windowID = 0;
 
 // ===== ĐỒNG BỘ THỜI GIAN =====
-int32_t timeOffset = 0;                 // offset = RPi_time - millis()
+// FIX: Dùng uint32_t để chống lỗi tính toán sinh âm trên vi điều khiển
+uint32_t timeOffset = 0;
 bool timeSynced = false;
-unsigned long windowStartTime = 0;      // Khởi tạo timer
+unsigned long windowStartTime = 0;
 
 // ===== HÀM GỬI GÓI TIN =====
 void sendPacket(int packetIndex, int totalPackets, const uint8_t* payload, size_t payloadLen) {
@@ -42,12 +41,13 @@ void sendPacket(int packetIndex, int totalPackets, const uint8_t* payload, size_
   buffer[2] = packetIndex;
   buffer[3] = totalPackets;
 
-  // Lấy nhãn thời gian NTP chuẩn
-  uint32_t timestamp = millis() + timeOffset;
+  // Lấy nhãn thời gian NTP chuẩn qua mạng (Đã khử bù 2 tự động)
+  uint32_t timestamp = (uint32_t)millis() + timeOffset;
   buffer[4] = (timestamp >> 24) & 0xFF;
   buffer[5] = (timestamp >> 16) & 0xFF;
   buffer[6] = (timestamp >> 8) & 0xFF;
   buffer[7] = timestamp & 0xFF;
+
   buffer[8] = (payloadLen >> 8) & 0xFF;
   buffer[9] = payloadLen & 0xFF;
   memcpy(buffer + 10, payload, payloadLen);
@@ -77,37 +77,60 @@ bool receiveACK(Decision &newDecision) {
   return false;
 }
 
-// ===== HÀM ĐỒNG BỘ THỜI GIAN (Thuật toán NTP thực tế) =====
+// ===== HÀM ĐỒNG BỘ THỜI GIAN (Thuật toán Cristian 10 Burst) =====
 void synchronizeTime() {
-  Serial.println("Sending SYNC packet (NTP Style)...");
+  Serial.println("Starting SYNC packet burst...");
 
-  unsigned long t_start = millis();     // Ghi mốc thời gian gửi bưu kiện
+  const int numAttempts = 10;
+  uint32_t minRTT = 0xFFFFFFFF;
+  uint32_t bestOffset = 0;
+  bool syncSuccess = false;
 
-  udp.beginPacket(rpiIP, rpiPort);
-  udp.write('S');
-  udp.endPacket();
+  for (int i = 0; i < numAttempts; i++) {
+    // Dọn rác bộ đệm
+    while (udp.parsePacket() > 0) { udp.flush(); }
 
-  unsigned long syncDeadline = millis() + 2000;
-  while (millis() < syncDeadline) {
-    int packetSize = udp.parsePacket();
-    if (packetSize == 4) {
-      unsigned long t_end = millis();   // Ghi mốc thời gian bưu kiện quay về
+    uint32_t t_start = millis();
+    udp.beginPacket(rpiIP, rpiPort);
+    udp.write('S');
+    udp.endPacket();
 
-      uint32_t rpiTimestamp;
-      udp.read((uint8_t*)&rpiTimestamp, 4);
+    unsigned long syncDeadline = millis() + 150;
+    while (millis() < syncDeadline) {
+      int packetSize = udp.parsePacket();
+      if (packetSize == 4) {
+        uint32_t t_end = millis();
 
-      // Tính Round Trip Time (RTT)
-      unsigned long rtt = t_end - t_start;
+        uint32_t rpiTimestamp;
+        udp.read((uint8_t*)&rpiTimestamp, 4);
 
-      // Khấu trừ một nửa RTT (thời gian lượt về) để triệt tiêu độ trễ đường truyền
-      timeOffset = rpiTimestamp - (t_end - (rtt / 2));
-      timeSynced = true;
+        // FIX Endianness: Đảo chiều Byte từ Python (Big-Endian) sang ESP32 (Little-Endian)
+        rpiTimestamp = ((rpiTimestamp & 0xFF000000) >> 24) |
+                       ((rpiTimestamp & 0x00FF0000) >>  8) |
+                       ((rpiTimestamp & 0x0000FF00) <<  8) |
+                       ((rpiTimestamp & 0x000000FF) << 24);
 
-      Serial.printf("Time synced! RTT = %lu ms, Offset = %d ms\n", rtt, timeOffset);
-      return;
+        uint32_t rtt = t_end - t_start;
+        uint32_t currentOffset = rpiTimestamp - (t_end - (rtt / 2));
+
+        if (rtt < minRTT) {
+          minRTT = rtt;
+          bestOffset = currentOffset;
+          syncSuccess = true;
+        }
+        break;
+      }
     }
+    delay(10); // Ngăn rác Router
   }
-  Serial.println("Time sync failed!");
+
+  if (syncSuccess) {
+    timeOffset = bestOffset;
+    timeSynced = true;
+    Serial.printf("Time synced! Chosen RTT = %u ms, Offset = %u\n", minRTT, timeOffset);
+  } else {
+    Serial.println("Time sync failed! Keeping old offset.");
+  }
 }
 
 void setup() {
@@ -131,7 +154,7 @@ void setup() {
 }
 
 void loop() {
-  // --- ĐỒNG BỘ ĐỊNH KỲ ĐỂ CHỐNG TRÔI ĐỒNG HỒ ---
+  // --- ĐỒNG BỘ ĐỊNH KỲ CHỐNG TRÔI ĐỒNG HỒ ---
   if (millis() - lastSyncTime >= SYNC_INTERVAL_MS) {
     synchronizeTime();
     lastSyncTime = millis();
@@ -147,11 +170,11 @@ void loop() {
     uint8_t dummyPayload[PAYLOAD_SIZE_SEND];
     for (int i = 0; i < PAYLOAD_SIZE_SEND; i++) dummyPayload[i] = random(256);
 
-    // Gửi cụm (Burst) 50 gói tin liên tiếp
+    // Gửi cụm (Burst) 50 gói tin
     if (currentDecision != WAIT) {
       for (int i = 0; i < PACKETS_PER_WINDOW; i++) {
         sendPacket(i, PACKETS_PER_WINDOW, dummyPayload, payloadSize);
-        delay(1); // Giãn cách phần cứng siêu nhỏ để tránh tràn bộ đệm
+        delay(1);
       }
       Serial.printf("Sent %d packets (payload=%d bytes)\n", PACKETS_PER_WINDOW, payloadSize);
     } else {
