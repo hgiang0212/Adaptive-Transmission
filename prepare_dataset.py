@@ -37,12 +37,12 @@ X = np.array(X_list, dtype=np.float32)        # (N, 5, 3)
 y = np.array(y_list, dtype=np.int64)          # (N,)
 
 # Chuẩn hóa Min-Max
-scaler = MinMaxScaler()
-X_flat = X.reshape(-1, 3)
-scaler.fit(X_flat)
-X_norm = scaler.transform(X_flat).reshape(X.shape)
-mins = scaler.data_min_
-maxs = scaler.data_max_
+X_reshaped = X.reshape(-1, 3)  # (N*10, 3)
+mins = X_reshaped.min(axis=0)
+maxs = X_reshaped.max(axis=0)
+# Tránh chia cho 0
+maxs[maxs == mins] = 1.0
+X_norm = (X - mins) / (maxs - mins)
 
 # Lưu dataset
 np.savez("dataset.npz", X=X_norm, y=y, mins=mins, maxs=maxs)
