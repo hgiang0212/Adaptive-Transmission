@@ -9,16 +9,33 @@ import torch
 import torch.nn as nn
 
 
-# ===== Kiến trúc GRU =====
-class GRUNet(nn.Module):
-    def __init__(self, input_size=3, hidden_size=16, num_classes=3):
+# ===== Kiến trúc GRU (phải khớp 100% với train_gru.py) =====
+class GRUClassifier(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers, num_classes, dropout):
         super().__init__()
-        self.gru = nn.GRU(input_size, hidden_size, batch_first=True)
-        self.fc = nn.Linear(hidden_size, num_classes)
+        proj_dim = input_size * 4                          # 3 → 12
+        self.input_proj = nn.Sequential(
+            nn.Linear(input_size, proj_dim),
+            nn.LayerNorm(proj_dim),
+            nn.Tanh(),
+        )
+        self.gru = nn.GRU(
+            input_size  = proj_dim,
+            hidden_size = hidden_size,
+            num_layers  = num_layers,
+            batch_first = True,
+            dropout     = dropout if num_layers > 1 else 0.0,
+        )
+        self.classifier = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(hidden_size, num_classes),
+        )
 
     def forward(self, x):
+        B, T, F = x.shape
+        x = self.input_proj(x.view(B * T, F)).view(B, T, -1)
         out, _ = self.gru(x)
-        return self.fc(out[:, -1, :])
+        return self.classifier(out[:, -1, :])
 
 
 # ===== Cấu hình =====
@@ -28,7 +45,6 @@ ESP8266_PORT_ACK = 5555
 
 HEADER_SIZE = 10
 WINDOW_MS = 2000.0
-WINDOW_SIZE = 10  # số cửa sổ tích lũy trước khi chạy GRU
 FEATURES = 3
 PACKETS_PER_WIN = 50
 MODEL_PATH = "gru_model.pt"
@@ -40,10 +56,16 @@ if not os.path.exists(MODEL_PATH):
     raise FileNotFoundError(f"Không tìm thấy model: {MODEL_PATH}")
 
 checkpoint = torch.load(MODEL_PATH, map_location=torch.device('cpu'))
-model = GRUNet(
-    input_size=checkpoint['input_size'],
-    hidden_size=checkpoint['hidden_size'],
-    num_classes=checkpoint['num_classes'],
+
+# Đọc seq_len từ checkpoint — không hardcode
+WINDOW_SIZE = int(checkpoint['seq_len'])
+
+model = GRUClassifier(
+    input_size  = checkpoint['input_size'],
+    hidden_size = checkpoint['hidden_size'],
+    num_layers  = checkpoint['num_layers'],
+    num_classes = checkpoint['num_classes'],
+    dropout     = checkpoint['dropout'],
 )
 model.load_state_dict(checkpoint['model_state_dict'])
 model.eval()
@@ -147,12 +169,13 @@ def compute_metrics(packets):
 
 
 def run_inference():
-    seq_np = np.array(window_buffer, dtype=np.float32).reshape(1, WINDOW_SIZE, FEATURES)
-    seq_norm = (seq_np - mins) / (maxs - mins)
-    tensor = torch.tensor(seq_norm, dtype=torch.float32)
+    # window_buffer đã đủ WINDOW_SIZE phần tử (deque(maxlen=WINDOW_SIZE))
+    seq_np   = np.array(window_buffer, dtype=np.float32).reshape(1, WINDOW_SIZE, FEATURES)
+    seq_norm = np.clip((seq_np - mins) / (maxs - mins), 0.0, 1.0)
+    tensor   = torch.tensor(seq_norm, dtype=torch.float32)
     with torch.no_grad():
-        output = model(tensor)
-        scores = output.numpy().flatten().tolist()
+        output   = model(tensor)
+        scores   = output.numpy().flatten().tolist()
         decision = int(output.argmax(dim=1).item())
     return decision, scores
 
@@ -192,10 +215,39 @@ try:
 
         window_id, seq, total, timestamp, payload_len = parsed
 
-        # ── Phát hiện cửa sổ mới ──────────────────────────────
+        # ── WAIT heartbeat (total=0): flush cửa sổ cũ rồi ACK ngay, không ghi packet ──
+        if total == 0:
+            log(f"WAIT heartbeat nhận được (window={window_id})")
+            if current_window_id is not None and packets_this_window:
+                # Flush cửa sổ cũ
+                metrics = compute_metrics(packets_this_window)
+                loss, delay, thr = metrics
+                recv_count = len(packets_this_window)
+                log(f"Window {current_window_id:4d} [flush@WAIT] | "
+                    f"recv={recv_count}/{PACKETS_PER_WIN}  "
+                    f"loss={loss:.1%}  delay={delay:.1f}ms  thr={thr:.0f}B/s")
+                window_buffer.append(metrics)
+                if len(window_buffer) >= WINDOW_SIZE:
+                    decision, scores = run_inference()
+                    log(f"  GRU scores={[f'{s:.3f}' for s in scores]}  "
+                        f"→ decision={decision} ({DECISION_LABEL[decision]})")
+                else:
+                    decision, scores = 0, []
+                    log(f"  Buffer {len(window_buffer)}/{WINDOW_SIZE} → fallback SEND")
+                log_csv(current_window_id, recv_count, loss, delay, thr, decision, scores)
+            else:
+                # Cửa sổ hiện tại trống (WAIT liên tiếp)
+                decision, scores = 0, []
+            send_ack(window_id, decision)
+            # Cập nhật window_id, reset buffer
+            current_window_id   = window_id
+            packets_this_window = []
+            continue
+
+        # ── Phát hiện cửa sổ mới (gói data thông thường) ─────────────────────
         if window_id != current_window_id:
 
-            # Xử lý cửa sổ vừa kết thúc
+            # Flush cửa sổ vừa kết thúc
             if current_window_id is not None and packets_this_window:
                 metrics = compute_metrics(packets_this_window)
                 loss, delay, thr = metrics
@@ -203,11 +255,11 @@ try:
 
                 log(f"Window {current_window_id:4d} | "
                     f"recv={recv_count}/{PACKETS_PER_WIN}  "
-                    f"loss={loss:.1%}  delay={delay:.1f}ms  thr={thr}B")
+                    f"loss={loss:.1%}  delay={delay:.1f}ms  thr={thr:.0f}B/s")
 
                 window_buffer.append(metrics)
 
-                if len(window_buffer) == WINDOW_SIZE:
+                if len(window_buffer) >= WINDOW_SIZE:
                     decision, scores = run_inference()
                     log(f"  GRU scores={[f'{s:.3f}' for s in scores]}  "
                         f"→ decision={decision} ({DECISION_LABEL[decision]})")
@@ -218,8 +270,8 @@ try:
                 send_ack(current_window_id, decision)
                 log_csv(current_window_id, recv_count, loss, delay, thr, decision, scores)
 
-            # Khởi tạo cửa sổ mới, LƯU Ý append thêm recv_time_ms
-            current_window_id = window_id
+            # Khởi tạo cửa sổ mới
+            current_window_id   = window_id
             packets_this_window = [(seq, total, timestamp, payload_len, recv_time_ms)]
             log(f"\nWindow {window_id} — bắt đầu nhận...")
 
