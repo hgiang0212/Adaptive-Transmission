@@ -11,8 +11,8 @@ const unsigned int localPort = 5555;    // Cổng ESP32 nhận ACK
 WiFiUDP udp;
 
 // ===== THAM SỐ HỆ THỐNG =====
-const unsigned long WINDOW_MS = 2000;   // Cửa sổ 1 giây
-const unsigned long ACK_TIMEOUT_MS = 100; // Timeout chờ ACK
+const unsigned long WINDOW_MS = 2000;   // Cửa sổ 2 giây
+const unsigned long ACK_TIMEOUT_MS = 1900; // Timeout chờ ACK
 
 const int PACKETS_PER_WINDOW = 50;
 

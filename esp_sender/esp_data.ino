@@ -12,7 +12,7 @@ WiFiUDP udp;
 
 // ===== THAM SỐ HỆ THỐNG =====
 const unsigned long WINDOW_MS         = 2000;
-const unsigned long ACK_TIMEOUT_MS    = 100;
+const unsigned long ACK_TIMEOUT_MS    = 1900;
 const int           PACKETS_PER_WINDOW = 50;
 const int           PAYLOAD_SIZE_SEND  = 64;
 
