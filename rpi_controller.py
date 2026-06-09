@@ -3,17 +3,18 @@ import struct
 import time
 import csv
 import os
+import threading
 import numpy as np
 from collections import deque
 import torch
 import torch.nn as nn
 
 
-# ===== Kiến trúc GRU (phải khớp 100% với train_gru.py) =====
+# ===== Kiến trúc GRU (khớp 100% với train_gru.py) =====
 class GRUClassifier(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes, dropout):
         super().__init__()
-        proj_dim = input_size * 4                          # 3 → 12
+        proj_dim = input_size * 4
         self.input_proj = nn.Sequential(
             nn.Linear(input_size, proj_dim),
             nn.LayerNorm(proj_dim),
@@ -39,26 +40,31 @@ class GRUClassifier(nn.Module):
 
 
 # ===== Cấu hình =====
-UDP_IP = "0.0.0.0"
-UDP_PORT_DATA = 4444
-ESP8266_PORT_ACK = 5555
+UDP_IP           = "0.0.0.0"
+UDP_PORT_DATA    = 4444
+ESP32_PORT_ACK   = 5555
 
-HEADER_SIZE = 10
-WINDOW_MS = 2000.0
-FEATURES = 3
-PACKETS_PER_WIN = 50
-MODEL_PATH = "gru_model.pt"
-LOG_CSV = "session_log.csv"
-LOG_TXT = "session_log.txt"
+HEADER_SIZE      = 10
+WINDOW_MS        = 2000.0        # chu kỳ window ESP32 (ms) — chỉ dùng để tính throughput
+FEATURES         = 3
+PACKETS_PER_WIN  = 50
+MODEL_PATH       = "gru_model.pt"
+LOG_CSV          = "session_log.csv"
+LOG_TXT          = "session_log.txt"
+
+# ESP32 gửi 50 gói × ~1ms = ~50ms, sau đó im lặng ~1950ms.
+# Nếu không nhận gói mới sau BURST_SILENCE_MS → burst của window này đã xong.
+# → flush + inference + gửi ACK ngay, không cần chờ window_id mới.
+# 300ms: đủ xa để tránh nhầm jitter mạng (~20ms), còn ~1700ms để ACK về kịp.
+BURST_SILENCE_MS = 300
+
 
 # ===== Load model =====
 if not os.path.exists(MODEL_PATH):
     raise FileNotFoundError(f"Không tìm thấy model: {MODEL_PATH}")
 
-checkpoint = torch.load(MODEL_PATH, map_location=torch.device('cpu'))
-
-# Đọc seq_len từ checkpoint — không hardcode
-WINDOW_SIZE = int(checkpoint['seq_len'])
+checkpoint  = torch.load(MODEL_PATH, map_location=torch.device('cpu'))
+WINDOW_SIZE = int(checkpoint['seq_len'])   # đọc từ checkpoint, không hardcode
 
 model = GRUClassifier(
     input_size  = checkpoint['input_size'],
@@ -70,21 +76,20 @@ model = GRUClassifier(
 model.load_state_dict(checkpoint['model_state_dict'])
 model.eval()
 
-mins = checkpoint['mins'].numpy()
-maxs = checkpoint['maxs'].numpy()
-maxs[maxs == mins] = 1.0  # tránh chia cho 0
+mins = checkpoint['mins'].numpy().astype(np.float32)
+maxs = checkpoint['maxs'].numpy().astype(np.float32)
+maxs[maxs == mins] = 1.0
 
 DECISION_LABEL = {0: "SEND", 1: "COMPRESS", 2: "WAIT"}
 
+
 # ===== Logging =====
-csv_file = open(LOG_CSV, 'w', newline='')
+csv_file   = open(LOG_CSV, 'w', newline='')
 csv_writer = csv.writer(csv_file)
 csv_writer.writerow(["timestamp", "window_id", "recv_pkts",
-                     "packet_loss", "avg_delay_ms", "throughput_bytes",
+                     "packet_loss", "avg_delay_ms", "throughput_bps",
                      "decision", "decision_label", "gru_scores"])
-
-txt_file = open(LOG_TXT, 'w')
-
+txt_file   = open(LOG_TXT, 'w')
 
 def log(msg: str):
     line = f"[{time.strftime('%H:%M:%S')}] {msg}"
@@ -92,28 +97,31 @@ def log(msg: str):
     txt_file.write(line + "\n")
     txt_file.flush()
 
-
 def log_csv(window_id, recv, loss, delay, thr, decision, scores):
     csv_writer.writerow([
         time.strftime('%Y-%m-%d %H:%M:%S'),
         window_id, recv,
-        f"{loss:.4f}", f"{delay:.2f}", thr,
+        f"{loss:.4f}", f"{delay:.2f}", f"{thr:.1f}",
         decision, DECISION_LABEL.get(decision, "?"),
         " ".join(f"{s:.4f}" for s in scores),
     ])
     csv_file.flush()
 
 
-# ===== Biến trạng thái =====
-window_buffer = deque(maxlen=WINDOW_SIZE)
-current_window_id = None
-packets_this_window = []  # list of (seq, total, timestamp_ms, payload_len, recv_time_ms)
-esp32_addr = None  # FIX: Đã đổi thành esp32_addr để không bị lỗi NameError
+# ===== Trạng thái chia sẻ =====
+state_lock          = threading.Lock()
+window_buffer       = deque(maxlen=WINDOW_SIZE)
+current_window_id   = None
+packets_this_window = []
+last_packet_mono    = None    # time.monotonic() của gói cuối nhận được
+window_flushed      = False   # True nếu window hiện tại đã được flush (tránh flush 2 lần)
+esp32_addr          = None
+
 
 # ===== Sockets =====
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock     = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((UDP_IP, UDP_PORT_DATA))
-sock.settimeout(0.1)
+sock.settimeout(0.02)   # 20ms — đủ nhạy để phát hiện silence 300ms
 ack_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 
@@ -122,54 +130,51 @@ def send_ack(window_id: int, decision: int):
     if esp32_addr is None:
         return
     msg = struct.pack('>HB', window_id, decision)
-    ack_sock.sendto(msg, (esp32_addr[0], ESP8266_PORT_ACK))
-    log(f"  ACK → {esp32_addr[0]}:{ESP8266_PORT_ACK}  "
+    ack_sock.sendto(msg, (esp32_addr[0], ESP32_PORT_ACK))
+    log(f"  ACK → {esp32_addr[0]}:{ESP32_PORT_ACK}  "
         f"window={window_id}  decision={decision} ({DECISION_LABEL.get(decision, '?')})")
 
 
 def handle_sync(addr):
     ts = int(time.time() * 1000) & 0xFFFFFFFF
     sock.sendto(struct.pack('>I', ts), addr)
-    log(f"SYNC: timestamp={ts} ms → {addr}")
+    log(f"SYNC: ts={ts} ms → {addr}")
 
 
 def parse_header(data: bytes):
-    if len(data) < 10:
+    if len(data) < HEADER_SIZE:
         return None
-    window_id = (data[0] << 8) | data[1]
-    seq = data[2]
-    total = data[3]
-    timestamp = struct.unpack_from('>I', data, 4)[0]
+    window_id   = (data[0] << 8) | data[1]
+    seq         = data[2]
+    total       = data[3]
+    timestamp   = struct.unpack_from('>I', data, 4)[0]
     payload_len = (data[8] << 8) | data[9]
     return window_id, seq, total, timestamp, payload_len
 
 
 def compute_metrics(packets):
     total_expected = packets[0][1]
-    received = len(packets)
-    packet_loss = 1.0 - received / total_expected if total_expected > 0 else 0.0
+    received       = len(packets)
+    packet_loss    = 1.0 - received / total_expected if total_expected > 0 else 0.0
 
-    # FIX: Tính delay từng gói tại thời điểm nó đến RPi, xử lý toán học chống tràn số mạng
     delays = []
     for pkt in packets:
-        send_ts = pkt[2]
-        recv_ts = pkt[4]
-        diff = (recv_ts - send_ts) & 0xFFFFFFFF
-        if diff > 0x7FFFFFFF:
-            delays.append(0.0)
-        else:
-            delays.append(float(diff))
+        diff = (pkt[4] - pkt[2]) & 0xFFFFFFFF
+        delays.append(float(diff) if diff <= 0x7FFFFFFF else 0.0)
     avg_delay = float(np.mean(delays)) if delays else 0.0
 
-    # GIỮ NGUYÊN: Throughput theo ý người dùng
-    total_bytes = sum(HEADER_SIZE + pkt[3] for pkt in packets)
-    throughput_bps = total_bytes / (WINDOW_MS / 1000.0)
-
+    total_bytes    = sum(HEADER_SIZE + pkt[3] for pkt in packets)
+    first_recv = packets[0][4]
+    last_recv = packets[-1][4]
+    duration_ms = last_recv - first_recv
+    if duration_ms > 0:
+        throughput_bps = total_bytes / (duration_ms / 2000.0)
+    else:
+        throughput_bps = 0.0
     return packet_loss, avg_delay, throughput_bps
 
 
 def run_inference():
-    # window_buffer đã đủ WINDOW_SIZE phần tử (deque(maxlen=WINDOW_SIZE))
     seq_np   = np.array(window_buffer, dtype=np.float32).reshape(1, WINDOW_SIZE, FEATURES)
     seq_norm = np.clip((seq_np - mins) / (maxs - mins), 0.0, 1.0)
     tensor   = torch.tensor(seq_norm, dtype=torch.float32)
@@ -180,12 +185,83 @@ def run_inference():
     return decision, scores
 
 
+def flush_current_window(reason=""):
+    """
+    Flush window đang mở: compute metrics → GRU inference → gửi ACK.
+    Gọi bên trong state_lock, nhưng send_ack/log chạy ngoài lock.
+    Trả về (wid, packets) để caller thực hiện flush ngoài lock.
+    """
+    global window_flushed
+    if window_flushed or current_window_id is None or not packets_this_window:
+        return None, None
+    window_flushed = True
+    return current_window_id, list(packets_this_window)
+
+
+def do_flush(wid, packets, reason=""):
+    """Thực hiện flush ngoài lock."""
+    recv_count = len(packets)
+    loss, delay, thr = compute_metrics(packets)
+
+    tag = f" [{reason}]" if reason else ""
+    log(f"Window {wid:4d}{tag} | "
+        f"recv={recv_count}/{PACKETS_PER_WIN}  "
+        f"loss={loss:.1%}  delay={delay:.1f}ms  thr={thr:.0f}B/s")
+
+    window_buffer.append((loss, delay, thr))
+
+    if len(window_buffer) >= WINDOW_SIZE:
+        decision, scores = run_inference()
+        log(f"  GRU scores={[f'{s:.3f}' for s in scores]}  "
+            f"→ decision={decision} ({DECISION_LABEL[decision]})")
+    else:
+        decision, scores = 0, []
+        log(f"  Buffer {len(window_buffer)}/{WINDOW_SIZE} → fallback SEND")
+
+    send_ack(wid, decision)
+    log_csv(wid, recv_count, loss, delay, thr, decision, scores)
+
+
+# ===== Burst-silence detector thread =====
+# Nguyên lý: ESP32 gửi 50 gói trong ~50ms, sau đó im ~1950ms.
+# Thread poll mỗi 20ms, phát hiện khoảng lặng >= BURST_SILENCE_MS sau khi
+# đã nhận ít nhất 1 gói trong window hiện tại → burst kết thúc → flush ngay.
+# Không phụ thuộc vào window_id, không cần heartbeat.
+def silence_detector():
+    global current_window_id, packets_this_window, last_packet_mono, window_flushed
+
+    while True:
+        time.sleep(0.02)   # poll 50 Hz
+
+        wid, packets = None, None
+        with state_lock:
+            if (current_window_id is None
+                    or window_flushed
+                    or last_packet_mono is None
+                    or not packets_this_window):
+                continue
+
+            silence = (time.monotonic() - last_packet_mono) * 1000   # ms
+            if silence < BURST_SILENCE_MS:
+                continue
+
+            # Burst đã xong — lấy dữ liệu để flush ngoài lock
+            wid, packets = flush_current_window(reason="SILENCE")
+
+        if wid is not None:
+            do_flush(wid, packets, reason="SILENCE")
+
+
 # ===== Main =====
-log("=" * 55)
-log(f" RPi Controller  |  GRU model: {MODEL_PATH}")
-log(f" Data :{UDP_PORT_DATA}   ACK → ESP32:{ESP8266_PORT_ACK}  (IP tự nhận diện)")
-log(f" Log CSV: {LOG_CSV}   TXT: {LOG_TXT}")
-log("=" * 55)
+log("=" * 60)
+log(f" RPi Controller  |  model: {MODEL_PATH}  seq_len={WINDOW_SIZE}")
+log(f" Data :{UDP_PORT_DATA}   ACK → ESP32:{ESP32_PORT_ACK}")
+log(f" Burst-silence timeout: {BURST_SILENCE_MS}ms")
+log(f" Log: {LOG_CSV}  {LOG_TXT}")
+log("=" * 60)
+
+detector = threading.Thread(target=silence_detector, daemon=True)
+detector.start()
 
 try:
     while True:
@@ -194,89 +270,52 @@ try:
         except socket.timeout:
             continue
 
-        # FIX: Ghi nhận thời gian đến ngay lập tức tại vòng lặp chính
         recv_time_ms = int(time.time() * 1000) & 0xFFFFFFFF
 
-        # Lưu IP ESP32 từ packet đầu tiên
-        if esp32_addr is None:
-            esp32_addr = addr
-            log(f"Phát hiện ESP32 tại {esp32_addr[0]}:{esp32_addr[1]}")
+        wid_to_flush, pkts_to_flush = None, None
 
-        # ── SYNC ──────────────────────────────────────────────
-        if len(data) == 1 and data[0] == ord('S'):
-            handle_sync(addr)
-            continue
+        with state_lock:
+            last_packet_mono = time.monotonic()
 
-        # ── Parse header ───────────────────────────────────────
-        parsed = parse_header(data)
-        if not parsed:
-            log(f"WARN: gói không hợp lệ ({len(data)}B) từ {addr}")
-            continue
+            if esp32_addr is None:
+                esp32_addr = addr
+                log(f"Phát hiện ESP32 tại {esp32_addr[0]}:{esp32_addr[1]}")
 
-        window_id, seq, total, timestamp, payload_len = parsed
+            # ── SYNC ──────────────────────────────────────────────────────────
+            if len(data) == 1 and data[0] == ord('S'):
+                handle_sync(addr)
+                continue
 
-        # ── WAIT heartbeat (total=0): flush cửa sổ cũ rồi ACK ngay, không ghi packet ──
-        if total == 0:
-            log(f"WAIT heartbeat nhận được (window={window_id})")
-            if current_window_id is not None and packets_this_window:
-                # Flush cửa sổ cũ
-                metrics = compute_metrics(packets_this_window)
-                loss, delay, thr = metrics
-                recv_count = len(packets_this_window)
-                log(f"Window {current_window_id:4d} [flush@WAIT] | "
-                    f"recv={recv_count}/{PACKETS_PER_WIN}  "
-                    f"loss={loss:.1%}  delay={delay:.1f}ms  thr={thr:.0f}B/s")
-                window_buffer.append(metrics)
-                if len(window_buffer) >= WINDOW_SIZE:
-                    decision, scores = run_inference()
-                    log(f"  GRU scores={[f'{s:.3f}' for s in scores]}  "
-                        f"→ decision={decision} ({DECISION_LABEL[decision]})")
-                else:
-                    decision, scores = 0, []
-                    log(f"  Buffer {len(window_buffer)}/{WINDOW_SIZE} → fallback SEND")
-                log_csv(current_window_id, recv_count, loss, delay, thr, decision, scores)
+            # ── Parse header ──────────────────────────────────────────────────
+            parsed = parse_header(data)
+            if not parsed:
+                log(f"WARN: gói không hợp lệ ({len(data)}B) từ {addr}")
+                continue
+
+            window_id, seq, total, timestamp, payload_len = parsed
+
+            # ── Window mới bắt đầu ────────────────────────────────────────────
+            if window_id != current_window_id:
+                # Nếu window cũ chưa được flush bởi silence_detector
+                # (ví dụ: burst sát nhau < 300ms gap), flush ngay tại đây
+                if not window_flushed and current_window_id is not None and packets_this_window:
+                    wid_to_flush, pkts_to_flush = flush_current_window(reason="BOUNDARY")
+
+                # Khởi tạo window mới
+                current_window_id   = window_id
+                packets_this_window = [(seq, total, timestamp, payload_len, recv_time_ms)]
+                window_flushed      = False
+                log(f"\nWindow {window_id} — bắt đầu nhận...")
+
             else:
-                # Cửa sổ hiện tại trống (WAIT liên tiếp)
-                decision, scores = 0, []
-            send_ack(window_id, decision)
-            # Cập nhật window_id, reset buffer
-            current_window_id   = window_id
-            packets_this_window = []
-            continue
+                # Gói trong cùng window — chỉ append nếu chưa flush
+                if not window_flushed:
+                    packets_this_window.append(
+                        (seq, total, timestamp, payload_len, recv_time_ms))
 
-        # ── Phát hiện cửa sổ mới (gói data thông thường) ─────────────────────
-        if window_id != current_window_id:
-
-            # Flush cửa sổ vừa kết thúc
-            if current_window_id is not None and packets_this_window:
-                metrics = compute_metrics(packets_this_window)
-                loss, delay, thr = metrics
-                recv_count = len(packets_this_window)
-
-                log(f"Window {current_window_id:4d} | "
-                    f"recv={recv_count}/{PACKETS_PER_WIN}  "
-                    f"loss={loss:.1%}  delay={delay:.1f}ms  thr={thr:.0f}B/s")
-
-                window_buffer.append(metrics)
-
-                if len(window_buffer) >= WINDOW_SIZE:
-                    decision, scores = run_inference()
-                    log(f"  GRU scores={[f'{s:.3f}' for s in scores]}  "
-                        f"→ decision={decision} ({DECISION_LABEL[decision]})")
-                else:
-                    decision, scores = 0, []
-                    log(f"  Buffer {len(window_buffer)}/{WINDOW_SIZE} → fallback SEND")
-
-                send_ack(current_window_id, decision)
-                log_csv(current_window_id, recv_count, loss, delay, thr, decision, scores)
-
-            # Khởi tạo cửa sổ mới
-            current_window_id   = window_id
-            packets_this_window = [(seq, total, timestamp, payload_len, recv_time_ms)]
-            log(f"\nWindow {window_id} — bắt đầu nhận...")
-
-        else:
-            packets_this_window.append((seq, total, timestamp, payload_len, recv_time_ms))
+        # Flush ngoài lock
+        if wid_to_flush is not None:
+            do_flush(wid_to_flush, pkts_to_flush)
 
 except KeyboardInterrupt:
     log("Dừng controller.")
