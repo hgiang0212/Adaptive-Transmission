@@ -11,8 +11,9 @@ const unsigned int localPort = 5555;    // Cổng ESP32 nhận ACK
 WiFiUDP udp;
 
 // ===== THAM SỐ HỆ THỐNG =====
-const unsigned long WINDOW_MS = 2000;   // Cửa sổ 2 giây
-const unsigned long ACK_TIMEOUT_MS = 1900; // Timeout chờ ACK
+const unsigned long WINDOW_MS = 2000;     // Cửa sổ 2 giây
+const unsigned long ACK_TIMEOUT_MS = 800; // Đủ thời gian RPi xử lý + GRU + RTT
+const unsigned long WAIT_DURATION_MS = 5000; // Im lặng 5s khi ở chế độ WAIT
 
 const int PACKETS_PER_WINDOW = 50;
 
@@ -26,6 +27,7 @@ unsigned long lastSyncTime = 0;
 enum Decision { SEND = 0, COMPRESS = 1, WAIT = 2 };
 Decision currentDecision = SEND;
 unsigned int windowID = 0;
+unsigned long waitStartTime = 0;   // thời điểm bắt đầu WAIT, dùng để đếm 5s
 
 // ===== ĐỒNG BỘ THỜI GIAN =====
 // FIX: Dùng uint32_t để chống lỗi tính toán sinh âm trên vi điều khiển
@@ -160,7 +162,19 @@ void loop() {
     lastSyncTime = millis();
   }
 
-  // --- QUẢN LÝ CỬA SỔ TRUYỀN DỮ LIỆU ---
+  // --- WAIT MODE: im lặng hoàn toàn, chờ đủ 5s rồi tự chuyển về SEND ---
+  if (currentDecision == WAIT) {
+    if (millis() - waitStartTime >= WAIT_DURATION_MS) {
+      Serial.println("WAIT timeout 5s → chuyển về SEND");
+      currentDecision = SEND;
+      windowStartTime = millis();  // reset timer, Khối 2 sẽ tự tăng windowID khi gửi
+    }
+    // Không làm gì thêm — không gửi gói, không gửi ACK, không trigger window
+    delay(10);
+    return;
+  }
+
+  // --- QUẢN LÝ CỬA SỔ TRUYỀN DỮ LIỆU (chỉ khi SEND hoặc COMPRESS) ---
   if (millis() - windowStartTime >= WINDOW_MS) {
     windowStartTime += WINDOW_MS;
     windowID++;
@@ -170,22 +184,26 @@ void loop() {
     uint8_t dummyPayload[PAYLOAD_SIZE_SEND];
     for (int i = 0; i < PAYLOAD_SIZE_SEND; i++) dummyPayload[i] = random(256);
 
-    // Gửi cụm (Burst) 50 gói tin
-    if (currentDecision != WAIT) {
-      for (int i = 0; i < PACKETS_PER_WINDOW; i++) {
-        sendPacket(i, PACKETS_PER_WINDOW, dummyPayload, payloadSize);
-        delay(1);
-      }
-      Serial.printf("Sent %d packets (payload=%d bytes)\n", PACKETS_PER_WINDOW, payloadSize);
-    } else {
-      Serial.println("WAIT: No data sent this window");
+    // Gửi burst
+    for (int i = 0; i < PACKETS_PER_WINDOW; i++) {
+      sendPacket(i, PACKETS_PER_WINDOW, dummyPayload, payloadSize);
+      delay(1);
     }
+    Serial.printf("Sent %d packets (window=%d payload=%d B)\n",
+                  PACKETS_PER_WINDOW, windowID, payloadSize);
 
-    // Chờ nhận lệnh ACK phản hồi từ RPi
+    // Chờ ACK từ RPi
     Decision newDecision;
     if (receiveACK(newDecision)) {
+      if (newDecision == WAIT) {
+        // Ghi nhận thời điểm bắt đầu WAIT để đếm 5s
+        waitStartTime = millis();
+        Serial.println("Decision: WAIT — im lặng 5s");
+      }
       currentDecision = newDecision;
     }
+    // Nếu ACK timeout: giữ nguyên decision hiện tại
   }
+
   delay(1);
 }
