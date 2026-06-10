@@ -1,62 +1,311 @@
-# Adaptive Edge IoT Transmission with GRU
+# 🚀 Intelligent Edge-AI Adaptive Communication System
 
-Hệ thống truyền dữ liệu cảm biến thích ứng trên ESP32 và Raspberry Pi, sử dụng mạng GRU (Gated Recurrent Unit) để dự đoán điều kiện mạng và tự động chọn chiến lược truyền (gửi thô, nén, hoặc chờ) theo thời gian thực.
 
-## Tổng quan
 
-Dự án này triển khai một pipeline truyền thông vòng kín (closed‑loop) giữa ESP32 (node cảm biến) và Raspberry Pi 4B (bộ điều khiển biên).  
-ESP32 thu thập dữ liệu cảm biến (giả lập hoặc thực tế) trong các **cửa sổ 1 giây**, gửi gói tin qua Wi‑Fi. Raspberry Pi nhận các gói, đo lường ba thông số mạng: **tỉ lệ mất gói, độ trễ trung bình, thông lượng (throughput)**. Một sliding window 10 mẫu (10 giây) được đưa vào mô hình GRU huấn luyện sẵn để suy luận chiến lược truyền tối ưu cho cửa sổ tiếp theo:  
-- **SEND** – gửi dữ liệu gốc.  
-- **COMPRESS** – nén dữ liệu (zlib/LZ4) rồi gửi.  
-- **WAIT** – đệm dữ liệu, không gửi trong cửa sổ này.  
+---
 
-Quyết định được gửi lại ESP32 thông qua gói ACK, khép kín vòng điều khiển với độ trễ dưới 20 ms.
+# 📖 Overview
 
-## Kiến trúc hệ thống
-<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/4249b9fd-0315-4474-933e-205a8c549f90" />
+This project proposes an intelligent Edge-AI communication framework capable of dynamically adapting IoT transmission behavior according to real-time network conditions.
 
-## Yêu cầu phần cứng
+The system continuously monitors:
 
-- **ESP32** (bất kỳ board nào hỗ trợ Wi‑Fi, ví dụ: ESP32‑DevKitC).
-- **Raspberry Pi 4B** (hoặc Raspberry Pi 3B+, Pi 5) chạy Raspberry Pi OS.
-- Mạng Wi‑Fi cục bộ (router).
+* Packet Loss
+* Delay
+* Throughput
 
-## Yêu cầu phần mềm
+and uses a GRU neural network running on a Raspberry Pi edge device to determine the optimal transmission strategy.
 
-### ESP32
-- Arduino IDE (hoặc PlatformIO) với board ESP32.
-- Thư viện: `WiFi.h`, `WiFiUdp.h` (có sẵn trong ESP32 core).
+The resulting decision is fed back to the ESP8266 node, creating a fully autonomous closed-loop communication system.
 
-### Raspberry Pi
-- Python ≥ 3.7
-- Các gói Python: `torch`, `numpy`  
-  ```bash
-  pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-  pip3 install numpy
-### Cài đặt và thiết lập
-1. Huấn luyện mô hình (trên máy tính)
-Chạy script train_model_pytorch.py để sinh dữ liệu giả, huấn luyện GRU và lưu mô hình cùng bộ chuẩn hóa vào file gru_model.pt:
-  ```bash
-  pip install torch numpy
-  ```
-Sau khi hoàn tất, bạn sẽ có file gru_model.pt. Copy file này sang Raspberry Pi (thư mục chứa script điều khiển).
+---
 
-2. Nạp firmware cho ESP32
-Mở file esp32_adaptive_sender.ino (hoặc code đã cung cấp ở trên) trong Arduino IDE.
+# 🎬 Live Dashboard Demo
 
-Sửa địa chỉ IP của Raspberry Pi (rpiIP) và thông tin Wi‑Fi (ssid, password).
+> Real-time monitoring of packet loss, delay, throughput, GRU prediction scores and communication decisions.
+<p align="center">
+  <img src="docs/dashboard.gif" width="900"/>
+</p>
 
-Chọn board ESP32, cổng COM và nạp.
+---
 
-Mở Serial Monitor (115200 baud) để quan sát log.
+# 🏗 System Architecture
 
-3. Cấu hình và chạy Raspberry Pi Controller
-Đảm bảo file gru_model.pth đã nằm cùng thư mục với script rpi_controller_pytorch.py.
+The architecture consists of:
 
-Sửa biến ESP32_IP trong script thành địa chỉ IP thực tế của ESP32 (có thể thấy trên Serial Monitor sau khi ESP32 kết nối Wi‑Fi).
+### Sensor Layer
 
-Chạy script:
-```bash
-python3 rpi_controller_pytorch.py
+* ESP8266 Node
+* Data Collection
+* UDP Packet Generation
+
+### Communication Layer
+
+* Wi-Fi Network
+* UDP Protocol
+* Cristian Time Synchronization
+
+### Edge Computing Layer
+
+* Raspberry Pi 4B
+* Packet Collection
+* Feature Extraction
+
+### Edge AI Layer
+
+* GRU Neural Network
+* Temporal Sequence Learning
+* Decision Prediction
+
+### Feedback Layer
+
+* ACK Transmission
+* Adaptive Control
+
+### Monitoring Layer
+
+* WebSocket Dashboard
+* CSV Logging
+* TXT Logging
+
+---
+
+# 🔄 System Workflow
+
+The complete workflow consists of:
+
+1. Time Synchronization
+2. UDP Data Transmission
+3. Window Aggregation
+4. Burst Detection
+5. Feature Extraction
+6. Sliding Window Buffering
+7. GRU Inference
+8. Decision Generation
+9. ACK Feedback
+10. Adaptive Transmission
+
+<p align="center">
+  <img src="docs/images/system_archi.png" width="900"/>
+</p>
+
+---
+
+# 🧠 Edge AI Decision Engine
+
+The Raspberry Pi computes three network metrics for every communication window:
+
+| Feature     | Description        |
+| ----------- | ------------------ |
+| Packet Loss | Packet loss ratio  |
+| Delay       | Average delay (ms) |
+| Throughput  | Throughput (B/s)   |
+
+These metrics form the GRU input sequence:
+
+```text
+[
+ packet_loss,
+ average_delay,
+ throughput
+]
 ```
-Controller sẽ bắt đầu lắng nghe dữ liệu từ ESP32 và gửi ACK.
+
+The model predicts one of three classes.
+
+---
+
+## Decision Classes
+
+| Class | Action   |
+| ----- | -------- |
+| 0     | SEND     |
+| 1     | COMPRESS |
+| 2     | WAIT     |
+
+### SEND
+
+```text
+Payload = 64 Bytes
+```
+
+Normal communication.
+
+---
+
+### COMPRESS
+
+```text
+Payload = 32 Bytes
+```
+
+Reduced bandwidth usage.
+
+---
+
+### WAIT
+
+```text
+Pause = 5 Seconds
+```
+
+Congestion avoidance mode.
+
+---
+
+# 📊 Dashboard Features
+
+The real-time dashboard displays:
+
+* Window ID
+* Packet Loss
+* Delay
+* Throughput
+* GRU Scores
+* Predicted Class
+* Historical Trends
+
+Communication updates are streamed using:
+
+```text
+WebSocket Port 8765
+```
+
+---
+
+# 📂 Project Structure
+
+```text
+.
+├── esp_sender/
+│   └── esp_sender.ino
+│
+├── raspberry_pi/
+│   ├── rpi_controller.py
+│
+├── logs/
+│   ├── session_log.csv
+│   └── session_log.txt
+│
+├── docs/
+│   ├── images/
+│   │   ├── system_architecture.png
+│   │   └── dashboard.gif
+│
+├── src/ 
+│   ├── collect_data/ 
+│   │   ├── esp_data.ino 
+│   │   ├── rpi_data.py
+│   ├── dashboard.html
+│   ├── train.py
+│
+├── requirements.txt
+│
+└── README.md
+```
+
+---
+
+# ⚙ Installation
+
+## Raspberry Pi
+
+```bash
+git clone https://github.com/hgiang0212/Adaptive-Transmission.git
+
+pip install -r requirements.txt
+```
+
+Run controller:
+
+```bash
+python rpi_controller.py
+```
+
+---
+
+## ESP8266
+
+Upload:
+
+```text
+esp_sender.ino
+```
+
+using:
+
+* Arduino IDE
+* PlatformIO
+
+Configure:
+
+```cpp
+const char* WIFI_SSID = "...";
+const char* WIFI_PASSWORD = "...";
+```
+
+---
+
+# 📈 Experimental Results
+
+The proposed adaptive communication framework achieved:
+
+| Metric                     | Improvement |
+| -------------------------- | ----------- |
+| Packet Loss                | ↓           |
+| Delay                      | ↓           |
+| Network Congestion         | ↓           |
+| Bandwidth Efficiency       | ↑           |
+| Autonomous Decision Making | ✓           |
+
+---
+
+# 🔬 Research Contributions
+
+✔ Edge AI-based Communication Control
+
+✔ GRU-based Network Condition Prediction
+
+✔ Closed-loop Adaptive Transmission
+
+✔ Lightweight IoT Deployment
+
+✔ Real-time Dashboard Monitoring
+
+✔ Raspberry Pi Edge Inference
+
+---
+
+# 🛠 Technology Stack
+
+### Hardware
+
+* ESP8266
+* Raspberry Pi 4B
+
+### Communication
+
+* UDP
+* Wi-Fi
+* WebSocket
+
+### Machine Learning
+
+* PyTorch
+* GRU
+
+### Software
+
+* Python
+* Arduino C++
+
+---
+
+# ⭐ Acknowledgements
+
+This project was developed as part of research on:
+
+* Edge Intelligence
+* Intelligent IoT Systems
+* Adaptive Communication Networks
+* Machine Learning for Network Optimization

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPi Controller Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
+        .glass-card { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    </style>
+</head>
+<body class="p-6 min-h-screen">
+
+    <header class="max-w-7xl mx-auto mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 glass-card p-4 rounded-2xl shadow-xl">
+        <div>
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">RPi Controller Monitor</h1>
+            <p class="text-sm text-gray-400">Hệ thống giám sát thông số mạng và quyết định GRU AI</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="flex items-center bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-sm">
+                <span class="text-gray-400 mr-2">WS://</span>
+                <input id="ws-ip" type="text" value="localhost" class="bg-transparent text-white outline-none w-32 font-mono" placeholder="192.168.1.238">
+                <span class="text-gray-500 font-mono">:8765</span>
+            </div>
+            <button id="btn-connect" onclick="connectWebSocket()" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition shadow-lg shadow-blue-900/30 cursor-pointer">
+                Kết nối
+            </button>
+            <div id="status-badge" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-950/50 border border-red-800 text-red-400 text-xs font-semibold">
+                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> MẤT KẾT NỐI
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-1 flex flex-col gap-6">
+            <div class="glass-card p-6 rounded-2xl relative overflow-hidden shadow-xl">
+                <div class="absolute -right-8 -top-8 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl"></div>
+                <h2 class="text-xs font-semibold text-gray-400 tracking-wider uppercase mb-1">Mã Window / Quyết định AI</h2>
+                <div class="flex items-baseline gap-2 mb-4">
+                    <span id="lbl-window-id" class="text-3xl font-bold font-mono text-gray-300">#----</span>
+                </div>
+                <div id="box-decision" class="w-full py-4 rounded-xl text-center font-bold text-2xl bg-gray-800/50 text-gray-400 border border-gray-700">
+                    WAITING...
+                </div>
+                
+                <div class="mt-5 space-y-2.5">
+                    <span class="text-xs font-medium text-gray-400">GRU Scores (Xác suất mô hình)</span>
+                    <div>
+                        <div class="flex justify-between text-xs font-mono mb-1"><span>SEND (0)</span><span id="score-0">0.00%</span></div>
+                        <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden"><div id="progress-0" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-mono mb-1"><span>COMPRESS (1)</span><span id="score-1">0.00%</span></div>
+                        <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden"><div id="progress-1" class="bg-amber-500 h-full w-0 transition-all duration-300"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-mono mb-1"><span>WAIT (2)</span><span id="score-2">0.00%</span></div>
+                        <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden"><div id="progress-2" class="bg-rose-500 h-full w-0 transition-all duration-300"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="glass-card p-4 rounded-xl shadow-lg">
+                    <p class="text-xs text-gray-400 mb-1">Gói tin đã nhận</p>
+                    <p id="lbl-recv" class="text-2xl font-bold font-mono text-blue-400">0 <span class="text-xs text-gray-500">/ 50</span></p>
+                </div>
+                <div class="glass-card p-4 rounded-xl shadow-lg">
+                    <p class="text-xs text-gray-400 mb-1">Tỷ lệ mất gói</p>
+                    <p id="lbl-loss" class="text-2xl font-bold font-mono text-rose-400">0.0%</p>
+                </div>
+                <div class="glass-card p-4 rounded-xl shadow-lg">
+                    <p class="text-xs text-gray-400 mb-1">Độ trễ trung bình</p>
+                    <p id="lbl-delay" class="text-2xl font-bold font-mono text-amber-400">0.0 <span class="text-xs text-gray-400">ms</span></p>
+                </div>
+                <div class="glass-card p-4 rounded-xl shadow-lg">
+                    <p class="text-xs text-gray-400 mb-1">Thông lượng</p>
+                    <p id="lbl-thr" class="text-2xl font-bold font-mono text-emerald-400">0.0 <span class="text-xs text-gray-400">B/s</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-2 flex flex-col gap-6">
+            <div class="glass-card p-6 rounded-2xl shadow-xl flex-1 flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-200">Biểu đồ xu hướng Network Metrics</h3>
+                    <span class="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded">Cập nhật theo từng Window</span>
+                </div>
+                <div class="flex-1 min-h-[300px] relative">
+                    <canvas id="metricsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="max-w-7xl mx-auto mt-6 glass-card p-4 rounded-2xl shadow-xl">
+        <h3 class="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-blue-400"></span> Nhật ký sự kiện Hệ thống (Mới nhất lên đầu)
+        </h3>
+        <div id="log-console" class="h-40 overflow-y-auto font-mono text-xs text-gray-400 bg-black/40 rounded-xl p-3 space-y-1 scrollbar-thin">
+            <div class="text-gray-500">[Hệ thống] Sẵn sàng kết nối WebSocket...</div>
+        </div>
+    </footer>
+
+    <script>
+        let ws;
+        let chart;
+        const maxDataPoints = 20; // Số lượng window hiển thị tối đa trên đồ thị
+
+        // Khởi tạo đồ thị Chart.js
+        function initChart() {
+            const ctx = document.getElementById('metricsChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Loss (%)', data: [], borderColor: '#f43f5e', backgroundColor: 'rgba(244, 63, 94, 0.1)', yAxisID: 'y-loss', tension: 0.3, borderWidth: 2 },
+                        { label: 'Delay (ms)', data: [], borderColor: '#fbbf24', backgroundColor: 'transparent', yAxisID: 'y-delay', tension: 0.3, borderWidth: 2 },
+                        { label: 'Throughput (B/s)', data: [], borderColor: '#10b981', backgroundColor: 'transparent', yAxisID: 'y-thr', tension: 0.3, borderWidth: 2 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#9ca3af', font: { family: 'Plus Jakarta Sans' } } } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
+                        'y-loss': { type: 'linear', position: 'left', min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#f43f5e', callback: v => v + '%' } },
+                        'y-delay': { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#fbbf24' } },
+                        'y-thr': { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#10b981' } }
+                    }
+                }
+            });
+        }
+
+        // Hàm kết nối WebSocket
+        function connectWebSocket() {
+            const ip = document.getElementById('ws-ip').value;
+            const statusBadge = document.getElementById('status-badge');
+            const btnConnect = document.getElementById('btn-connect');
+            
+            if (ws) { ws.close(); }
+
+            writeLog(`Đang kết nối tới ws://${ip}:8765...`, "info");
+            ws = new WebSocket(`ws://${ip}:8765`);
+
+            ws.onopen = () => {
+                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> ĐÃ KẾT NỐI`;
+                statusBadge.className = "flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-950/50 border border-emerald-800 text-emerald-400 text-xs font-semibold";
+                btnConnect.innerText = "Ngắt";
+                btnConnect.className = "bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition cursor-pointer";
+                btnConnect.setAttribute("onclick", "disconnectWS()");
+                writeLog("Kết nối WebSocket thành công!", "success");
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    updateDashboard(data);
+                } catch (e) {
+                    writeLog("Lỗi cú pháp JSON nhận từ RPi", "err");
+                }
+            };
+
+            ws.onclose = () => {
+                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> MẤT KẾT NỐI`;
+                statusBadge.className = "flex items-center gap-2 px-3 py-2 rounded-xl bg-red-950/50 border border-red-800 text-red-400 text-xs font-semibold";
+                btnConnect.innerText = "Kết nối";
+                btnConnect.className = "bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition cursor-pointer";
+                btnConnect.setAttribute("onclick", "connectWebSocket()");
+                writeLog("Đã ngắt kết nối với Server RPi.", "err");
+            };
+
+            ws.onerror = (err) => {
+                writeLog("Kết nối lỗi hoặc RPi đang đóng cổng.", "err");
+            };
+        }
+
+        function disconnectWS() {
+            if (ws) ws.close();
+        }
+
+        // Cập nhật dữ liệu hiển thị lên màn hình
+        function updateDashboard(data) {
+            // data cấu trúc: {id, loss, recv, delay, thr, decision, label, scores}
+            document.getElementById('lbl-window-id').innerText = `Window #${data.id}`;
+            document.getElementById('lbl-recv').innerHTML = `${data.recv} <span class="text-xs text-gray-500">/ 50</span>`;
+            document.getElementById('lbl-loss').innerText = `${(data.loss * 100).toFixed(1)}%`;
+            document.getElementById('lbl-delay').innerText = `${data.delay.toFixed(1)}`;
+            document.getElementById('lbl-thr').innerText = `${data.thr.toFixed(1)}`;
+
+            // Thiết lập màu sắc hiển thị cho Decision
+            const box = document.getElementById('box-decision');
+            box.innerText = data.label;
+            if (data.decision === 0) { // SEND
+                box.className = "w-full py-4 rounded-xl text-center font-bold text-2xl bg-emerald-950/40 text-emerald-400 border border-emerald-800 shadow-inner";
+            } else if (data.decision === 1) { // COMPRESS
+                box.className = "w-full py-4 rounded-xl text-center font-bold text-2xl bg-amber-950/40 text-amber-400 border border-amber-800 shadow-inner";
+            } else { // WAIT
+                box.className = "w-full py-4 rounded-xl text-center font-bold text-2xl bg-rose-950/40 text-rose-400 border border-rose-800 shadow-inner";
+            }
+
+            // Cập nhật Progress Bar Scores (nếu có mảng scores)
+            if (data.scores && data.scores.length >= 3) {
+                // Giả định scores từ GRU mô hình ra chưa qua Softmax nên xử lý thô hoặc hiển thị trực tiếp.
+                // Để trực quan hóa, code này chuẩn hóa softmax cơ bản cho thanh progress nhìn đẹp mắt:
+                const exps = data.scores.map(Math.exp);
+                const sumExps = exps.reduce((a, b) => a + b, 0);
+                const pct = exps.map(v => (v / sumExps) * 100);
+
+                for(let i=0; i<3; i++) {
+                    document.getElementById(`score-${i}`).innerText = `${pct[i].toFixed(1)}% (${data.scores[i].toFixed(2)})`;
+                    document.getElementById(`progress-${i}`).style.width = `${pct[i]}%`;
+                }
+            }
+
+            // Ghi nhật ký lịch sử log hệ thống
+            writeLog(`[WID ${data.id}] Decision: ${data.label} | Loss: ${(data.loss*100).toFixed(1)}%, Delay: ${data.delay}ms, Thr: ${data.thr}B/s`, "normal");
+
+            // Đẩy dữ liệu vào Biểu đồ
+            updateChart(`W-${data.id}`, data.loss * 100, data.delay, data.thr);
+        }
+
+        // Xử lý đẩy dữ liệu vào Chart
+        function updateChart(label, loss, delay, thr) {
+            chart.data.labels.push(label);
+            chart.data.datasets[0].data.push(loss);
+            chart.data.datasets[1].data.push(delay);
+            chart.data.datasets[2].data.push(thr);
+
+            if (chart.data.labels.length > maxDataPoints) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+                chart.data.datasets[1].data.shift();
+                chart.data.datasets[2].data.shift();
+            }
+            chart.update('none'); // Update dạng mượt, không giật hình animation
+        }
+
+        // Viết log vào khung console bên dưới màn hình
+        function writeLog(msg, type) {
+            const consoleBox = document.getElementById('log-console');
+            const timeStr = new Date().toLocaleTimeString();
+            let color = "text-gray-400";
+            if (type === "err") color = "text-rose-400 font-semibold";
+            if (type === "success") color = "text-emerald-400 font-semibold";
+            if (type === "info") color = "text-blue-400";
+            
+            const newLine = `<div class="${color}">[${timeStr}] ${msg}</div>`;
+            consoleBox.insertAdjacentHTML('afterbegin', newLine); // Chèn log mới lên trên cùng
+        }
+
+        // Tự động chạy khi mở trang web
+        window.onload = () => {
+            initChart();
+        };
+    </script>
+</body>
+</html>
