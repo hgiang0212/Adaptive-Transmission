@@ -8,7 +8,9 @@ import numpy as np
 from collections import deque
 import torch
 import torch.nn as nn
-
+import json
+import asyncio
+import websockets
 
 # ===== Kiến trúc GRU (khớp 100% với train_gru.py) =====
 class GRUClassifier(nn.Module):
@@ -116,7 +118,41 @@ packets_this_window = []
 last_packet_mono    = None    # time.monotonic() của gói cuối nhận được
 window_flushed      = False   # True nếu window hiện tại đã được flush (tránh flush 2 lần)
 esp32_addr          = None
+# ===== WebSocket server =====
+WS_PORT    = 8765
+_ws_loop   = None
+_ws_clients = set()
 
+async def _ws_handler(ws):
+    _ws_clients.add(ws)
+    try:
+        await ws.wait_closed()
+    finally:
+        _ws_clients.discard(ws)
+
+async def _ws_serve():
+    async with websockets.serve(_ws_handler, "0.0.0.0", WS_PORT):
+        await asyncio.Future()   # chạy mãi
+
+def _start_ws():
+    global _ws_loop
+    _ws_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(_ws_loop)
+    _ws_loop.run_until_complete(_ws_serve())
+
+threading.Thread(target=_start_ws, daemon=True).start()
+
+def ws_broadcast(data: dict):
+    """Gọi từ do_flush() để push data lên dashboard."""
+    if not _ws_clients or _ws_loop is None:
+        return
+    msg = json.dumps(data)
+    async def _send():
+        await asyncio.gather(
+            *[c.send(msg) for c in list(_ws_clients)],
+            return_exceptions=True
+        )
+    asyncio.run_coroutine_threadsafe(_send(), _ws_loop)
 
 # ===== Sockets =====
 sock     = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -220,6 +256,16 @@ def do_flush(wid, packets, reason=""):
 
     send_ack(wid, decision)
     log_csv(wid, recv_count, loss, delay, thr, decision, scores)
+    ws_broadcast({
+        "id": wid,
+        "loss": round(loss, 4),
+        "recv": recv_count,
+        "delay": round(delay, 2),
+        "thr": round(thr, 1),
+        "decision": decision,
+        "label": DECISION_LABEL[decision],
+        "scores": [round(s, 4) for s in scores],
+    })
 
 
 # ===== Burst-silence detector thread =====
@@ -278,6 +324,7 @@ try:
             last_packet_mono = time.monotonic()
 
             if esp32_addr is None:
+
                 esp32_addr = addr
                 log(f"Phát hiện ESP32 tại {esp32_addr[0]}:{esp32_addr[1]}")
 

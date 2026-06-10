@@ -1,0 +1,473 @@
+[11:03:54] ============================================================
+[11:03:54]  RPi Controller  |  model: gru_model.pt  seq_len=5
+[11:03:54]  Data :4444   ACK → ESP32:5555
+[11:03:54]  Burst-silence timeout: 300ms
+[11:03:54]  Log: session_log.csv  session_log.txt
+[11:03:54] ============================================================
+[11:03:59] Phát hiện ESP32 tại 192.168.1.217:5555
+[11:03:59] SYNC: ts=2947778866 ms → ('192.168.1.217', 5555)
+[11:03:59] SYNC: ts=2947778884 ms → ('192.168.1.217', 5555)
+[11:03:59] SYNC: ts=2947778898 ms → ('192.168.1.217', 5555)
+[11:03:59] SYNC: ts=2947778911 ms → ('192.168.1.217', 5555)
+[11:03:59] SYNC: ts=2947778929 ms → ('192.168.1.217', 5555)
+[11:03:59] SYNC: ts=2947778945 ms → ('192.168.1.217', 5555)
+[11:03:59] SYNC: ts=2947778959 ms → ('192.168.1.217', 5555)
+[11:03:59] SYNC: ts=2947778978 ms → ('192.168.1.217', 5555)
+[11:03:59] SYNC: ts=2947778992 ms → ('192.168.1.217', 5555)
+[11:03:59] SYNC: ts=2947779007 ms → ('192.168.1.217', 5555)
+[11:04:01] 
+Window 1 — bắt đầu nhận...
+[11:04:01] Window    1 [SILENCE] | recv=46/50  loss=8.0%  delay=11.0ms  thr=104738B/s
+[11:04:01]   Buffer 1/5 → fallback SEND
+[11:04:01]   ACK → 192.168.1.217:5555  window=1  decision=0 (SEND)
+[11:04:03] 
+Window 2 — bắt đầu nhận...
+[11:04:03] Window    2 [SILENCE] | recv=46/50  loss=8.0%  delay=7.5ms  thr=111607B/s
+[11:04:03]   Buffer 2/5 → fallback SEND
+[11:04:03]   ACK → 192.168.1.217:5555  window=2  decision=0 (SEND)
+[11:04:05] 
+Window 3 — bắt đầu nhận...
+[11:04:05] Window    3 [SILENCE] | recv=50/50  loss=0.0%  delay=3.7ms  thr=119355B/s
+[11:04:05]   Buffer 3/5 → fallback SEND
+[11:04:05]   ACK → 192.168.1.217:5555  window=3  decision=0 (SEND)
+[11:04:07] 
+Window 4 — bắt đầu nhận...
+[11:04:07] Window    4 [SILENCE] | recv=50/50  loss=0.0%  delay=3.0ms  thr=125424B/s
+[11:04:07]   Buffer 4/5 → fallback SEND
+[11:04:07]   ACK → 192.168.1.217:5555  window=4  decision=0 (SEND)
+[11:04:09] 
+Window 5 — bắt đầu nhận...
+[11:04:09] Window    5 [SILENCE] | recv=45/50  loss=10.0%  delay=5.4ms  thr=111000B/s
+[11:04:09]   GRU scores=['3.171', '0.886', '-1.255']  → decision=0 (SEND)
+[11:04:09]   ACK → 192.168.1.217:5555  window=5  decision=0 (SEND)
+[11:04:11] 
+Window 6 — bắt đầu nhận...
+[11:04:11] Window    6 [SILENCE] | recv=50/50  loss=0.0%  delay=3.1ms  thr=127586B/s
+[11:04:11]   GRU scores=['3.701', '0.605', '-1.426']  → decision=0 (SEND)
+[11:04:11]   ACK → 192.168.1.217:5555  window=6  decision=0 (SEND)
+[11:04:13] 
+Window 7 — bắt đầu nhận...
+[11:04:13] Window    7 [SILENCE] | recv=44/50  loss=12.0%  delay=5.5ms  thr=112276B/s
+[11:04:13]   GRU scores=['2.936', '1.020', '-1.197']  → decision=0 (SEND)
+[11:04:13]   ACK → 192.168.1.217:5555  window=7  decision=0 (SEND)
+[11:04:15] 
+Window 8 — bắt đầu nhận...
+[11:04:15] Window    8 [SILENCE] | recv=50/50  loss=0.0%  delay=3.2ms  thr=132143B/s
+[11:04:15]   GRU scores=['3.709', '0.621', '-1.440']  → decision=0 (SEND)
+[11:04:15]   ACK → 192.168.1.217:5555  window=8  decision=0 (SEND)
+[11:04:17] 
+Window 9 — bắt đầu nhận...
+[11:04:17] Window    9 [SILENCE] | recv=49/50  loss=2.0%  delay=5.3ms  thr=129500B/s
+[11:04:17]   GRU scores=['3.663', '0.641', '-1.411']  → decision=0 (SEND)
+[11:04:17]   ACK → 192.168.1.217:5555  window=9  decision=0 (SEND)
+[11:04:19] 
+Window 10 — bắt đầu nhận...
+[11:04:19] Window   10 [SILENCE] | recv=50/50  loss=0.0%  delay=4.5ms  thr=108824B/s
+[11:04:19]   GRU scores=['3.715', '0.584', '-1.422']  → decision=0 (SEND)
+[11:04:19]   ACK → 192.168.1.217:5555  window=10  decision=0 (SEND)
+[11:04:21] 
+Window 11 — bắt đầu nhận...
+[11:04:21] Window   11 [SILENCE] | recv=50/50  loss=0.0%  delay=3.1ms  thr=134545B/s
+[11:04:21]   GRU scores=['3.704', '0.592', '-1.414']  → decision=0 (SEND)
+[11:04:21]   ACK → 192.168.1.217:5555  window=11  decision=0 (SEND)
+[11:04:23] 
+Window 12 — bắt đầu nhận...
+[11:04:23] Window   12 [SILENCE] | recv=50/50  loss=0.0%  delay=2.6ms  thr=132143B/s
+[11:04:23]   GRU scores=['3.695', '0.555', '-1.405']  → decision=0 (SEND)
+[11:04:23]   ACK → 192.168.1.217:5555  window=12  decision=0 (SEND)
+[11:04:25] 
+Window 13 — bắt đầu nhận...
+[11:04:25] Window   13 [SILENCE] | recv=50/50  loss=0.0%  delay=3.2ms  thr=129825B/s
+[11:04:25]   GRU scores=['3.700', '0.554', '-1.407']  → decision=0 (SEND)
+[11:04:25]   ACK → 192.168.1.217:5555  window=13  decision=0 (SEND)
+[11:04:27] 
+Window 14 — bắt đầu nhận...
+[11:04:27] Window   14 [SILENCE] | recv=50/50  loss=0.0%  delay=2.5ms  thr=134545B/s
+[11:04:27]   GRU scores=['3.694', '0.554', '-1.404']  → decision=0 (SEND)
+[11:04:27]   ACK → 192.168.1.217:5555  window=14  decision=0 (SEND)
+[11:04:29] 
+Window 15 — bắt đầu nhận...
+[11:04:29] Window   15 [SILENCE] | recv=50/50  loss=0.0%  delay=5.7ms  thr=107246B/s
+[11:04:29]   GRU scores=['3.719', '0.543', '-1.419']  → decision=0 (SEND)
+[11:04:29]   ACK → 192.168.1.217:5555  window=15  decision=0 (SEND)
+[11:04:31] 
+Window 16 — bắt đầu nhận...
+[11:04:31] Window   16 [SILENCE] | recv=50/50  loss=0.0%  delay=4.0ms  thr=115625B/s
+[11:04:31]   GRU scores=['3.708', '0.547', '-1.414']  → decision=0 (SEND)
+[11:04:31]   ACK → 192.168.1.217:5555  window=16  decision=0 (SEND)
+[11:04:33] 
+Window 17 — bắt đầu nhận...
+[11:04:33] Window   17 [SILENCE] | recv=50/50  loss=0.0%  delay=3.6ms  thr=117460B/s
+[11:04:33]   GRU scores=['3.704', '0.547', '-1.412']  → decision=0 (SEND)
+[11:04:33]   ACK → 192.168.1.217:5555  window=17  decision=0 (SEND)
+[11:04:35] 
+Window 18 — bắt đầu nhận...
+[11:04:35] Window   18 [SILENCE] | recv=50/50  loss=0.0%  delay=2.9ms  thr=132143B/s
+[11:04:35]   GRU scores=['3.698', '0.550', '-1.407']  → decision=0 (SEND)
+[11:04:35]   ACK → 192.168.1.217:5555  window=18  decision=0 (SEND)
+[11:04:37] 
+Window 19 — bắt đầu nhận...
+[11:04:37] Window   19 [SILENCE] | recv=50/50  loss=0.0%  delay=3.2ms  thr=139623B/s
+[11:04:37]   GRU scores=['3.700', '0.547', '-1.407']  → decision=0 (SEND)
+[11:04:37]   ACK → 192.168.1.217:5555  window=19  decision=0 (SEND)
+[11:04:39] 
+Window 20 — bắt đầu nhận...
+[11:04:39] Window   20 [SILENCE] | recv=50/50  loss=0.0%  delay=3.7ms  thr=121311B/s
+[11:04:39]   GRU scores=['3.703', '0.549', '-1.410']  → decision=0 (SEND)
+[11:04:39]   ACK → 192.168.1.217:5555  window=20  decision=0 (SEND)
+[11:04:41] 
+Window 21 — bắt đầu nhận...
+[11:04:41] Window   21 [SILENCE] | recv=50/50  loss=0.0%  delay=2.7ms  thr=129825B/s
+[11:04:41]   GRU scores=['3.696', '0.553', '-1.406']  → decision=0 (SEND)
+[11:04:41]   ACK → 192.168.1.217:5555  window=21  decision=0 (SEND)
+[11:04:43] 
+Window 22 — bắt đầu nhận...
+[11:04:43] Window   22 [SILENCE] | recv=48/50  loss=4.0%  delay=4.4ms  thr=126857B/s
+[11:04:43]   GRU scores=['3.569', '0.628', '-1.364']  → decision=0 (SEND)
+[11:04:43]   ACK → 192.168.1.217:5555  window=22  decision=0 (SEND)
+[11:04:45] 
+Window 23 — bắt đầu nhận...
+[11:04:45] Window   23 [SILENCE] | recv=50/50  loss=0.0%  delay=2.9ms  thr=129825B/s
+[11:04:45]   GRU scores=['3.694', '0.565', '-1.407']  → decision=0 (SEND)
+[11:04:45]   ACK → 192.168.1.217:5555  window=23  decision=0 (SEND)
+[11:04:47] 
+Window 24 — bắt đầu nhận...
+[11:04:47] Window   24 [SILENCE] | recv=50/50  loss=0.0%  delay=5.0ms  thr=134545B/s
+[11:04:47]   GRU scores=['3.714', '0.552', '-1.414']  → decision=0 (SEND)
+[11:04:47]   ACK → 192.168.1.217:5555  window=24  decision=0 (SEND)
+[11:04:49] 
+Window 25 — bắt đầu nhận...
+[11:04:49] Window   25 [SILENCE] | recv=50/50  loss=0.0%  delay=2.9ms  thr=121311B/s
+[11:04:49]   GRU scores=['3.699', '0.560', '-1.407']  → decision=0 (SEND)
+[11:04:49]   ACK → 192.168.1.217:5555  window=25  decision=0 (SEND)
+[11:04:51] 
+Window 26 — bắt đầu nhận...
+[11:04:51] Window   26 [SILENCE] | recv=50/50  loss=0.0%  delay=3.1ms  thr=132143B/s
+[11:04:51]   GRU scores=['3.699', '0.560', '-1.407']  → decision=0 (SEND)
+[11:04:51]   ACK → 192.168.1.217:5555  window=26  decision=0 (SEND)
+[11:04:53] 
+Window 27 — bắt đầu nhận...
+[11:04:53] Window   27 [SILENCE] | recv=50/50  loss=0.0%  delay=3.7ms  thr=129825B/s
+[11:04:53]   GRU scores=['3.704', '0.549', '-1.409']  → decision=0 (SEND)
+[11:04:53]   ACK → 192.168.1.217:5555  window=27  decision=0 (SEND)
+[11:04:55] 
+Window 28 — bắt đầu nhận...
+[11:04:55] Window   28 [SILENCE] | recv=50/50  loss=0.0%  delay=4.5ms  thr=96104B/s
+[11:04:55]   GRU scores=['3.709', '0.546', '-1.416']  → decision=0 (SEND)
+[11:04:55]   ACK → 192.168.1.217:5555  window=28  decision=0 (SEND)
+[11:04:57] 
+Window 29 — bắt đầu nhận...
+[11:04:57] Window   29 [SILENCE] | recv=45/50  loss=10.0%  delay=9.5ms  thr=91233B/s
+[11:04:57]   GRU scores=['3.233', '0.825', '-1.281']  → decision=0 (SEND)
+[11:04:57]   ACK → 192.168.1.217:5555  window=29  decision=0 (SEND)
+[11:04:59] 
+Window 30 — bắt đầu nhận...
+[11:04:59] Window   30 [SILENCE] | recv=18/50  loss=64.0%  delay=31.1ms  thr=37000B/s
+[11:04:59]   GRU scores=['-3.673', '-0.598', '3.248']  → decision=2 (WAIT)
+[11:04:59]   ACK → 192.168.1.217:5555  window=30  decision=2 (WAIT)
+[11:05:06] 
+Window 31 — bắt đầu nhận...
+[11:05:07] Window   31 [SILENCE] | recv=50/50  loss=0.0%  delay=3.6ms  thr=139623B/s
+[11:05:07]   GRU scores=['2.935', '-0.183', '-0.888']  → decision=0 (SEND)
+[11:05:07]   ACK → 192.168.1.217:5555  window=31  decision=0 (SEND)
+[11:05:08] 
+Window 32 — bắt đầu nhận...
+[11:05:09] Window   32 [SILENCE] | recv=48/50  loss=4.0%  delay=5.0ms  thr=129164B/s
+[11:05:09]   GRU scores=['3.288', '0.293', '-1.190']  → decision=0 (SEND)
+[11:05:09]   ACK → 192.168.1.217:5555  window=32  decision=0 (SEND)
+[11:05:10] 
+Window 33 — bắt đầu nhận...
+[11:05:11] Window   33 [SILENCE] | recv=47/50  loss=6.0%  delay=6.0ms  thr=112194B/s
+[11:05:11]   GRU scores=['3.379', '0.491', '-1.260']  → decision=0 (SEND)
+[11:05:11]   ACK → 192.168.1.217:5555  window=33  decision=0 (SEND)
+[11:05:12] 
+Window 34 — bắt đầu nhận...
+[11:05:13] Window   34 [SILENCE] | recv=50/50  loss=0.0%  delay=4.3ms  thr=137037B/s
+[11:05:13]   GRU scores=['3.639', '0.440', '-1.340']  → decision=0 (SEND)
+[11:05:13]   ACK → 192.168.1.217:5555  window=34  decision=0 (SEND)
+[11:05:14] 
+Window 35 — bắt đầu nhận...
+[11:05:15] Window   35 [SILENCE] | recv=50/50  loss=0.0%  delay=3.5ms  thr=127586B/s
+[11:05:15]   GRU scores=['3.705', '0.568', '-1.412']  → decision=0 (SEND)
+[11:05:15]   ACK → 192.168.1.217:5555  window=35  decision=0 (SEND)
+[11:05:16] 
+Window 36 — bắt đầu nhận...
+[11:05:17] Window   36 [SILENCE] | recv=46/50  loss=8.0%  delay=5.6ms  thr=130923B/s
+[11:05:17]   GRU scores=['3.356', '0.769', '-1.301']  → decision=0 (SEND)
+[11:05:17]   ACK → 192.168.1.217:5555  window=36  decision=0 (SEND)
+[11:05:18] 
+Window 37 — bắt đầu nhận...
+[11:05:19] Window   37 [SILENCE] | recv=44/50  loss=12.0%  delay=5.8ms  thr=114246B/s
+[11:05:19]   GRU scores=['2.927', '1.033', '-1.199']  → decision=0 (SEND)
+[11:05:19]   ACK → 192.168.1.217:5555  window=37  decision=0 (SEND)
+[11:05:20] 
+Window 38 — bắt đầu nhận...
+[11:05:21] Window   38 [SILENCE] | recv=49/50  loss=2.0%  delay=6.3ms  thr=116968B/s
+[11:05:21]   GRU scores=['3.671', '0.641', '-1.434']  → decision=0 (SEND)
+[11:05:21]   ACK → 192.168.1.217:5555  window=38  decision=0 (SEND)
+[11:05:22] 
+Window 39 — bắt đầu nhận...
+[11:05:23] Window   39 [SILENCE] | recv=50/50  loss=0.0%  delay=4.3ms  thr=145098B/s
+[11:05:23]   GRU scores=['3.718', '0.602', '-1.429']  → decision=0 (SEND)
+[11:05:23]   ACK → 192.168.1.217:5555  window=39  decision=0 (SEND)
+[11:05:24] 
+Window 40 — bắt đầu nhận...
+[11:05:25] Window   40 [SILENCE] | recv=50/50  loss=0.0%  delay=3.7ms  thr=113846B/s
+[11:05:25]   GRU scores=['3.711', '0.602', '-1.421']  → decision=0 (SEND)
+[11:05:25]   ACK → 192.168.1.217:5555  window=40  decision=0 (SEND)
+[11:05:26] 
+Window 41 — bắt đầu nhận...
+[11:05:27] Window   41 [SILENCE] | recv=50/50  loss=0.0%  delay=3.7ms  thr=119355B/s
+[11:05:27]   GRU scores=['3.708', '0.589', '-1.417']  → decision=0 (SEND)
+[11:05:27]   ACK → 192.168.1.217:5555  window=41  decision=0 (SEND)
+[11:05:28] 
+Window 42 — bắt đầu nhận...
+[11:05:29] Window   42 [SILENCE] | recv=32/50  loss=36.0%  delay=14.1ms  thr=74000B/s
+[11:05:29]   GRU scores=['-1.319', '3.274', '-0.142']  → decision=1 (COMPRESS)
+[11:05:29]   ACK → 192.168.1.217:5555  window=42  decision=1 (COMPRESS)
+[11:05:30] 
+Window 43 — bắt đầu nhận...
+[11:05:31] Window   43 [SILENCE] | recv=49/50  loss=2.0%  delay=6.9ms  thr=63323B/s
+[11:05:31]   GRU scores=['3.924', '0.708', '-1.786']  → decision=0 (SEND)
+[11:05:31]   ACK → 192.168.1.217:5555  window=43  decision=0 (SEND)
+[11:05:32] 
+Window 44 — bắt đầu nhận...
+[11:05:33] Window   44 [SILENCE] | recv=34/50  loss=32.0%  delay=12.3ms  thr=89857B/s
+[11:05:33]   GRU scores=['-1.200', '3.396', '-0.316']  → decision=1 (COMPRESS)
+[11:05:33]   ACK → 192.168.1.217:5555  window=44  decision=1 (COMPRESS)
+[11:05:34] 
+Window 45 — bắt đầu nhận...
+[11:05:35] Window   45 [SILENCE] | recv=50/50  loss=0.0%  delay=4.0ms  thr=73684B/s
+[11:05:35]   GRU scores=['4.002', '0.717', '-1.831']  → decision=0 (SEND)
+[11:05:35]   ACK → 192.168.1.217:5555  window=45  decision=0 (SEND)
+[11:05:36] 
+Window 46 — bắt đầu nhận...
+[11:05:37] Window   46 [SILENCE] | recv=50/50  loss=0.0%  delay=3.8ms  thr=129825B/s
+[11:05:37]   GRU scores=['3.786', '0.755', '-1.612']  → decision=0 (SEND)
+[11:05:37]   ACK → 192.168.1.217:5555  window=46  decision=0 (SEND)
+[11:05:38] 
+Window 47 — bắt đầu nhận...
+[11:05:39] Window   47 [SILENCE] | recv=50/50  loss=0.0%  delay=4.5ms  thr=125424B/s
+[11:05:39]   GRU scores=['3.750', '0.686', '-1.506']  → decision=0 (SEND)
+[11:05:39]   ACK → 192.168.1.217:5555  window=47  decision=0 (SEND)
+[11:05:40] 
+Window 48 — bắt đầu nhận...
+[11:05:41] Window   48 [SILENCE] | recv=42/50  loss=16.0%  delay=6.7ms  thr=109053B/s
+[11:05:41]   GRU scores=['2.170', '1.565', '-1.064']  → decision=0 (SEND)
+[11:05:41]   ACK → 192.168.1.217:5555  window=48  decision=0 (SEND)
+[11:05:42] 
+Window 49 — bắt đầu nhận...
+[11:05:43] Window   49 [SILENCE] | recv=50/50  loss=0.0%  delay=3.8ms  thr=134545B/s
+[11:05:43]   GRU scores=['3.738', '0.623', '-1.484']  → decision=0 (SEND)
+[11:05:43]   ACK → 192.168.1.217:5555  window=49  decision=0 (SEND)
+[11:05:44] 
+Window 50 — bắt đầu nhận...
+[11:05:45] Window   50 [SILENCE] | recv=50/50  loss=0.0%  delay=3.9ms  thr=134545B/s
+[11:05:45]   GRU scores=['3.720', '0.611', '-1.440']  → decision=0 (SEND)
+[11:05:45]   ACK → 192.168.1.217:5555  window=50  decision=0 (SEND)
+[11:05:46] 
+Window 51 — bắt đầu nhận...
+[11:05:47] Window   51 [SILENCE] | recv=50/50  loss=0.0%  delay=3.7ms  thr=132143B/s
+[11:05:47]   GRU scores=['3.714', '0.603', '-1.424']  → decision=0 (SEND)
+[11:05:47]   ACK → 192.168.1.217:5555  window=51  decision=0 (SEND)
+[11:05:48] 
+Window 52 — bắt đầu nhận...
+[11:05:49] Window   52 [SILENCE] | recv=48/50  loss=4.0%  delay=5.5ms  thr=122483B/s
+[11:05:49]   GRU scores=['3.583', '0.685', '-1.381']  → decision=0 (SEND)
+[11:05:49]   ACK → 192.168.1.217:5555  window=52  decision=0 (SEND)
+[11:05:50] 
+Window 53 — bắt đầu nhận...
+[11:05:51] Window   53 [SILENCE] | recv=50/50  loss=0.0%  delay=5.8ms  thr=100000B/s
+[11:05:51]   GRU scores=['3.718', '0.551', '-1.423']  → decision=0 (SEND)
+[11:05:51]   ACK → 192.168.1.217:5555  window=53  decision=0 (SEND)
+[11:05:52] 
+Window 54 — bắt đầu nhận...
+[11:05:53] Window   54 [SILENCE] | recv=48/50  loss=4.0%  delay=6.1ms  thr=122483B/s
+[11:05:53]   GRU scores=['3.589', '0.622', '-1.377']  → decision=0 (SEND)
+[11:05:53]   ACK → 192.168.1.217:5555  window=54  decision=0 (SEND)
+[11:05:54] 
+Window 55 — bắt đầu nhận...
+[11:05:55] Window   55 [SILENCE] | recv=49/50  loss=2.0%  delay=8.0ms  thr=108239B/s
+[11:05:55]   GRU scores=['3.677', '0.580', '-1.412']  → decision=0 (SEND)
+[11:05:55]   ACK → 192.168.1.217:5555  window=55  decision=0 (SEND)
+[11:05:56] 
+Window 56 — bắt đầu nhận...
+[11:05:57] Window   56 [SILENCE] | recv=41/50  loss=18.0%  delay=9.5ms  thr=108357B/s
+[11:05:57]   GRU scores=['1.782', '1.662', '-0.933']  → decision=0 (SEND)
+[11:05:57]   ACK → 192.168.1.217:5555  window=56  decision=0 (SEND)
+[11:05:58] 
+Window 57 — bắt đầu nhận...
+[11:05:59] Window   57 [SILENCE] | recv=50/50  loss=0.0%  delay=4.0ms  thr=127586B/s
+[11:05:59]   GRU scores=['3.769', '0.637', '-1.524']  → decision=0 (SEND)
+[11:05:59]   ACK → 192.168.1.217:5555  window=57  decision=0 (SEND)
+[11:06:00] 
+Window 58 — bắt đầu nhận...
+[11:06:01] Window   58 [SILENCE] | recv=36/50  loss=28.0%  delay=10.2ms  thr=88800B/s
+[11:06:01]   GRU scores=['-0.834', '3.168', '-0.369']  → decision=1 (COMPRESS)
+[11:06:01]   ACK → 192.168.1.217:5555  window=58  decision=1 (COMPRESS)
+[11:06:02] 
+Window 59 — bắt đầu nhận...
+[11:06:03] Window   59 [SILENCE] | recv=50/50  loss=0.0%  delay=4.3ms  thr=77778B/s
+[11:06:03]   GRU scores=['3.970', '0.689', '-1.771']  → decision=0 (SEND)
+[11:06:03]   ACK → 192.168.1.217:5555  window=59  decision=0 (SEND)
+[11:06:04] 
+Window 60 — bắt đầu nhận...
+[11:06:05] Window   60 [SILENCE] | recv=46/50  loss=8.0%  delay=7.0ms  thr=121571B/s
+[11:06:05]   GRU scores=['3.416', '0.917', '-1.451']  → decision=0 (SEND)
+[11:06:05]   ACK → 192.168.1.217:5555  window=60  decision=0 (SEND)
+[11:06:06] 
+Window 61 — bắt đầu nhận...
+[11:06:07] Window   61 [SILENCE] | recv=50/50  loss=0.0%  delay=3.9ms  thr=134545B/s
+[11:06:07]   GRU scores=['3.740', '0.691', '-1.495']  → decision=0 (SEND)
+[11:06:07]   ACK → 192.168.1.217:5555  window=61  decision=0 (SEND)
+[11:06:08] 
+Window 62 — bắt đầu nhận...
+[11:06:09] Window   62 [SILENCE] | recv=50/50  loss=0.0%  delay=4.4ms  thr=129825B/s
+[11:06:09]   GRU scores=['3.730', '0.697', '-1.481']  → decision=0 (SEND)
+[11:06:09]   ACK → 192.168.1.217:5555  window=62  decision=0 (SEND)
+[11:06:10] 
+Window 63 — bắt đầu nhận...
+[11:06:11] Window   63 [SILENCE] | recv=50/50  loss=0.0%  delay=5.6ms  thr=127586B/s
+[11:06:11]   GRU scores=['3.722', '0.554', '-1.420']  → decision=0 (SEND)
+[11:06:11]   ACK → 192.168.1.217:5555  window=63  decision=0 (SEND)
+[11:06:12] 
+Window 64 — bắt đầu nhận...
+[11:06:13] Window   64 [SILENCE] | recv=47/50  loss=6.0%  delay=7.9ms  thr=105394B/s
+[11:06:13]   GRU scores=['3.507', '0.683', '-1.355']  → decision=0 (SEND)
+[11:06:13]   ACK → 192.168.1.217:5555  window=64  decision=0 (SEND)
+[11:06:14] 
+Window 65 — bắt đầu nhận...
+[11:06:15] Window   65 [SILENCE] | recv=39/50  loss=22.0%  delay=11.3ms  thr=87455B/s
+[11:06:15]   GRU scores=['0.527', '2.374', '-0.675']  → decision=1 (COMPRESS)
+[11:06:15]   ACK → 192.168.1.217:5555  window=65  decision=1 (COMPRESS)
+[11:06:16] 
+Window 66 — bắt đầu nhận...
+[11:06:17] Window   66 [SILENCE] | recv=46/50  loss=8.0%  delay=7.0ms  thr=72906B/s
+[11:06:17]   GRU scores=['3.476', '0.881', '-1.536']  → decision=0 (SEND)
+[11:06:17]   ACK → 192.168.1.217:5555  window=66  decision=0 (SEND)
+[11:06:18] 
+Window 67 — bắt đầu nhận...
+[11:06:19] Window   67 [SILENCE] | recv=50/50  loss=0.0%  delay=5.0ms  thr=129825B/s
+[11:06:19]   GRU scores=['3.761', '0.676', '-1.520']  → decision=0 (SEND)
+[11:06:19]   ACK → 192.168.1.217:5555  window=67  decision=0 (SEND)
+[11:06:20] 
+Window 68 — bắt đầu nhận...
+[11:06:21] Window   68 [SILENCE] | recv=50/50  loss=0.0%  delay=4.3ms  thr=121311B/s
+[11:06:21]   GRU scores=['3.739', '0.659', '-1.471']  → decision=0 (SEND)
+[11:06:21]   ACK → 192.168.1.217:5555  window=68  decision=0 (SEND)
+[11:06:22] 
+Window 69 — bắt đầu nhận...
+[11:06:23] Window   69 [SILENCE] | recv=48/50  loss=4.0%  delay=6.0ms  thr=126857B/s
+[11:06:23]   GRU scores=['3.595', '0.733', '-1.412']  → decision=0 (SEND)
+[11:06:23]   ACK → 192.168.1.217:5555  window=69  decision=0 (SEND)
+[11:06:24] 
+Window 70 — bắt đầu nhận...
+[11:06:25] Window   70 [SILENCE] | recv=43/50  loss=14.0%  delay=8.9ms  thr=90914B/s
+[11:06:25]   GRU scores=['2.666', '1.173', '-1.139']  → decision=0 (SEND)
+[11:06:25]   ACK → 192.168.1.217:5555  window=70  decision=0 (SEND)
+[11:06:26] 
+Window 71 — bắt đầu nhận...
+[11:06:27] Window   71 [SILENCE] | recv=50/50  loss=0.0%  delay=5.5ms  thr=119355B/s
+[11:06:27]   GRU scores=['3.735', '0.606', '-1.469']  → decision=0 (SEND)
+[11:06:27]   ACK → 192.168.1.217:5555  window=71  decision=0 (SEND)
+[11:06:28] 
+Window 72 — bắt đầu nhận...
+[11:06:29] Window   72 [SILENCE] | recv=50/50  loss=0.0%  delay=4.5ms  thr=132143B/s
+[11:06:29]   GRU scores=['3.723', '0.595', '-1.437']  → decision=0 (SEND)
+[11:06:29]   ACK → 192.168.1.217:5555  window=72  decision=0 (SEND)
+[11:06:30] 
+Window 73 — bắt đầu nhận...
+[11:06:31] Window   73 [SILENCE] | recv=50/50  loss=0.0%  delay=4.7ms  thr=137037B/s
+[11:06:31]   GRU scores=['3.721', '0.588', '-1.425']  → decision=0 (SEND)
+[11:06:31]   ACK → 192.168.1.217:5555  window=73  decision=0 (SEND)
+[11:06:32] 
+Window 74 — bắt đầu nhận...
+[11:06:33] Window   74 [SILENCE] | recv=50/50  loss=0.0%  delay=4.7ms  thr=134545B/s
+[11:06:33]   GRU scores=['3.717', '0.588', '-1.422']  → decision=0 (SEND)
+[11:06:33]   ACK → 192.168.1.217:5555  window=74  decision=0 (SEND)
+[11:06:34] 
+Window 75 — bắt đầu nhận...
+[11:06:35] Window   75 [SILENCE] | recv=50/50  loss=0.0%  delay=4.4ms  thr=129825B/s
+[11:06:35]   GRU scores=['3.709', '0.541', '-1.412']  → decision=0 (SEND)
+[11:06:35]   ACK → 192.168.1.217:5555  window=75  decision=0 (SEND)
+[11:06:36] 
+Window 76 — bắt đầu nhận...
+[11:06:37] Window   76 [SILENCE] | recv=37/50  loss=26.0%  delay=11.0ms  thr=89770B/s
+[11:06:37]   GRU scores=['-0.433', '2.897', '-0.449']  → decision=1 (COMPRESS)
+[11:06:37]   ACK → 192.168.1.217:5555  window=76  decision=1 (COMPRESS)
+[11:06:38] 
+Window 77 — bắt đầu nhận...
+[11:06:39] Window   77 [SILENCE] | recv=50/50  loss=0.0%  delay=5.0ms  thr=76364B/s
+[11:06:39]   GRU scores=['3.934', '0.665', '-1.728']  → decision=0 (SEND)
+[11:06:39]   ACK → 192.168.1.217:5555  window=77  decision=0 (SEND)
+[11:06:40] 
+Window 78 — bắt đầu nhận...
+[11:06:41] Window   78 [SILENCE] | recv=45/50  loss=10.0%  delay=7.0ms  thr=125660B/s
+[11:06:41]   GRU scores=['3.233', '0.978', '-1.372']  → decision=0 (SEND)
+[11:06:41]   ACK → 192.168.1.217:5555  window=78  decision=0 (SEND)
+[11:06:42] 
+Window 79 — bắt đầu nhận...
+[11:06:43] Window   79 [SILENCE] | recv=50/50  loss=0.0%  delay=4.9ms  thr=132143B/s
+[11:06:43]   GRU scores=['3.747', '0.683', '-1.495']  → decision=0 (SEND)
+[11:06:43]   ACK → 192.168.1.217:5555  window=79  decision=0 (SEND)
+[11:06:44] 
+Window 80 — bắt đầu nhận...
+[11:06:45] Window   80 [SILENCE] | recv=24/50  loss=52.0%  delay=4.2ms  thr=136615B/s
+[11:06:45]   GRU scores=['-2.692', '1.804', '1.534']  → decision=1 (COMPRESS)
+[11:06:45]   ACK → 192.168.1.217:5555  window=80  decision=1 (COMPRESS)
+[11:06:46] 
+Window 81 — bắt đầu nhận...
+[11:06:47] Window   81 [SILENCE] | recv=50/50  loss=0.0%  delay=4.3ms  thr=71186B/s
+[11:06:47]   GRU scores=['3.760', '0.471', '-1.643']  → decision=0 (SEND)
+[11:06:47]   ACK → 192.168.1.217:5555  window=81  decision=0 (SEND)
+[11:06:48] 
+Window 82 — bắt đầu nhận...
+[11:06:49] Window   82 [SILENCE] | recv=50/50  loss=0.0%  delay=4.4ms  thr=134545B/s
+[11:06:49]   GRU scores=['3.691', '0.606', '-1.519']  → decision=0 (SEND)
+[11:06:49]   ACK → 192.168.1.217:5555  window=82  decision=0 (SEND)
+[11:06:50] 
+Window 83 — bắt đầu nhận...
+[11:06:51] Window   83 [SILENCE] | recv=50/50  loss=0.0%  delay=4.9ms  thr=127586B/s
+[11:06:51]   GRU scores=['3.707', '0.601', '-1.458']  → decision=0 (SEND)
+[11:06:51]   ACK → 192.168.1.217:5555  window=83  decision=0 (SEND)
+[11:06:52] 
+Window 84 — bắt đầu nhận...
+[11:06:53] Window   84 [SILENCE] | recv=50/50  loss=0.0%  delay=4.8ms  thr=125424B/s
+[11:06:53]   GRU scores=['3.694', '0.624', '-1.438']  → decision=0 (SEND)
+[11:06:53]   ACK → 192.168.1.217:5555  window=84  decision=0 (SEND)
+[11:06:54] 
+Window 85 — bắt đầu nhận...
+[11:06:55] Window   85 [SILENCE] | recv=50/50  loss=0.0%  delay=4.9ms  thr=129825B/s
+[11:06:55]   GRU scores=['3.714', '0.538', '-1.416']  → decision=0 (SEND)
+[11:06:55]   ACK → 192.168.1.217:5555  window=85  decision=0 (SEND)
+[11:06:56] 
+Window 86 — bắt đầu nhận...
+[11:06:57] Window   86 [SILENCE] | recv=50/50  loss=0.0%  delay=5.1ms  thr=113846B/s
+[11:06:57]   GRU scores=['3.716', '0.539', '-1.418']  → decision=0 (SEND)
+[11:06:57]   ACK → 192.168.1.217:5555  window=86  decision=0 (SEND)
+[11:06:58] 
+Window 87 — bắt đầu nhận...
+[11:06:59] Window   87 [SILENCE] | recv=50/50  loss=0.0%  delay=4.5ms  thr=127586B/s
+[11:06:59]   GRU scores=['3.712', '0.540', '-1.415']  → decision=0 (SEND)
+[11:06:59]   ACK → 192.168.1.217:5555  window=87  decision=0 (SEND)
+[11:07:00] 
+Window 88 — bắt đầu nhận...
+[11:07:01] Window   88 [SILENCE] | recv=50/50  loss=0.0%  delay=4.9ms  thr=132143B/s
+[11:07:01]   GRU scores=['3.713', '0.538', '-1.415']  → decision=0 (SEND)
+[11:07:01]   ACK → 192.168.1.217:5555  window=88  decision=0 (SEND)
+[11:07:02] 
+Window 89 — bắt đầu nhận...
+[11:07:03] Window   89 [SILENCE] | recv=50/50  loss=0.0%  delay=4.5ms  thr=132143B/s
+[11:07:03]   GRU scores=['3.710', '0.540', '-1.413']  → decision=0 (SEND)
+[11:07:03]   ACK → 192.168.1.217:5555  window=89  decision=0 (SEND)
+[11:07:04] 
+Window 90 — bắt đầu nhận...
+[11:07:05] Window   90 [SILENCE] | recv=50/50  loss=0.0%  delay=4.7ms  thr=139623B/s
+[11:07:05]   GRU scores=['3.711', '0.540', '-1.413']  → decision=0 (SEND)
+[11:07:05]   ACK → 192.168.1.217:5555  window=90  decision=0 (SEND)
+[11:07:06] 
+Window 91 — bắt đầu nhận...
+[11:07:07] Window   91 [SILENCE] | recv=50/50  loss=0.0%  delay=5.1ms  thr=129825B/s
+[11:07:07]   GRU scores=['3.715', '0.539', '-1.415']  → decision=0 (SEND)
+[11:07:07]   ACK → 192.168.1.217:5555  window=91  decision=0 (SEND)
+[11:07:07] Dừng controller.

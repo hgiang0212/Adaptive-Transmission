@@ -9,7 +9,7 @@ UDP_PORT_DATA = 4444  # RPi lắng nghe dữ liệu từ ESP32/ESP8266
 ESP8266_PORT_ACK = 5555  # ESP nhận ACK tại localPort=5555
 
 # ===== Thông số hệ thống =====
-PACKETS_PER_WINDOW = 100
+PACKETS_PER_WINDOW = 50
 PAYLOAD_SIZE = 64
 HEADER_SIZE = 10
 PACKET_SIZE = HEADER_SIZE + PAYLOAD_SIZE  # 74 bytes
@@ -48,32 +48,13 @@ CHANNEL_QUALITY = {
 }
 
 # ===== File log CSV và TXT =====
-LOG_CSV = "session_log.csv"
+CSV_FILENAME = "raw_metrics.csv"
 
-csv_file = open(LOG_CSV, 'w', newline='')
+csv_file = open(CSV_FILENAME, 'w', newline='')
 csv_writer = csv.writer(csv_file)
-csv_writer.writerow([
-    "timestamp", "window_id", "recv_pkts",
-    "packet_loss", "avg_delay_ms", "throughput_bps",
-    "decision", "channel_quality"
-])
-def log_csv(window_id, recv, loss, delay, thr, decision):
-    csv_writer.writerow([
-        time.strftime('%Y-%m-%d %H:%M:%S'),
-        window_id, recv,
-        f"{loss:.4f}", f"{delay:.2f}", int(thr),
-        decision, CHANNEL_QUALITY[decision]
-    ])
-    csv_file.flush()
+csv_writer.writerow(["timestamp", "window_id", "recv_pkts", "packet_loss", "avg_delay_ms", "throughput_bps"])
 
-# ===== Hàm ra quyết định dựa trên ngưỡng =====
-def decide_action(loss: float, delay_ms: float, throughput_bps: float):
-    if delay_ms > DELAY_BAD or loss > LOSS_BAD or throughput_bps < THROUGHPUT_BAD:
-        return 2
-    # Normal nếu delay trung bình hoặc loss trung bình hoặc throughput thấp
-    if delay_ms < DELAY_GOOD or loss < LOSS_GOOD or throughput_bps > THROUGHPUT_GOOD:
-        return 0
-    return 1
+
 def send_ack(window_id: int, decision: int = 0):
     if esp8266_addr is None:
         return
@@ -127,17 +108,27 @@ def compute_metrics(packets):
 
     # --- Throughput (Bps) ---
     total_bytes = sum(HEADER_SIZE + pkt[3] for pkt in packets)
-    throughput_bps = total_bytes / (WINDOW_MS / 1000.0)
+    first_recv = packets[0][4]
+    last_recv = packets[-1][4]
+    duration_ms = last_recv - first_recv
+    if duration_ms > 0:
+        throughput_bps = total_bytes / (duration_ms / 2000.0)
+    else:
+        throughput_bps = 0.0
 
     return packet_loss, avg_delay, throughput_bps
 
 
 # ---------------------------------------------------------------------------
 print("=" * 55)
-print(" RPi Controller – Bản nâng cấp Đồng bộ Cristian (Best RTT)")
+print(" RPi Controller")
 print(f" Lắng nghe UDP :{UDP_PORT_DATA}")
 print("=" * 55)
 
+current_win = None
+win_packets = []
+win_start_time = None
+print("Collecting data... Press Ctrl+C to stop.")
 try:
     while True:
         try:
@@ -171,20 +162,17 @@ try:
                 if metrics:
                     loss, delay, thr = metrics
                     recv_cnt = len(packets_this_window)
-                    # Quyết định dựa trên ngưỡng
-                    decision = decide_action(loss, delay, thr)
-
-                    print(
-                        f"[Window {current_window_id:4d}] "
-                        f"recv={recv_cnt}/{PACKETS_PER_WINDOW}  "
-                        f"loss={loss:5.1%}  delay={delay:6.2f}ms  "
-                        f"throughput={thr:7.1f}Bps  → {CHANNEL_QUALITY[decision]}"
-                    )
-
+                    csv_writer.writerow([
+                        time.strftime('%Y-%m-%d %H:%M:%S'),
+                        current_window_id, recv_cnt,
+                        f"{loss:.4f}", f"{delay:.2f}", int(thr)
+                    ])
+                    csv_file.flush()
+                    print(f"Window {current_window_id:4d}: recv={recv_cnt:2d}/{PACKETS_PER_WINDOW} "
+                          f"loss={loss:5.1%} delay={delay:6.2f}ms thr={int(thr):5d} Bps")
                     # Gửi ACK với quyết định thực tế
                     send_ack(current_window_id, decision=0)
                     # Ghi CSV
-                    log_csv(current_window_id, recv_cnt, loss, delay, thr, decision)
 
             current_window_id = window_id
             packets_this_window = [(seq, total, send_timestamp_ms, payload_len, recv_time_ms)]
