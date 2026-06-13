@@ -1,4 +1,4 @@
-# 🚀 Intelligent Edge-AI Adaptive Communication System
+# 🚀 Intelligent Edge-AI Adaptive Transmission System
 
 
 
