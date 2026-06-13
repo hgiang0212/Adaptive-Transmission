@@ -12,7 +12,7 @@ import json
 import asyncio
 import websockets
 
-# ===== Kiến trúc GRU (khớp 100% với train_gru.py) =====
+
 class GRUClassifier(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes, dropout):
         super().__init__()
@@ -44,20 +44,17 @@ class GRUClassifier(nn.Module):
 # ===== Cấu hình =====
 UDP_IP           = "0.0.0.0"
 UDP_PORT_DATA    = 4444
-ESP32_PORT_ACK   = 5555
+ESP8266_PORT_ACK   = 5555
 
 HEADER_SIZE      = 10
-WINDOW_MS        = 2000.0        # chu kỳ window ESP32 (ms) — chỉ dùng để tính throughput
+WINDOW_MS        = 2000.0
 FEATURES         = 3
 PACKETS_PER_WIN  = 50
 MODEL_PATH       = "gru_model.pt"
 LOG_CSV          = "session_log.csv"
 LOG_TXT          = "session_log.txt"
 
-# ESP32 gửi 50 gói × ~1ms = ~50ms, sau đó im lặng ~1950ms.
-# Nếu không nhận gói mới sau BURST_SILENCE_MS → burst của window này đã xong.
-# → flush + inference + gửi ACK ngay, không cần chờ window_id mới.
-# 300ms: đủ xa để tránh nhầm jitter mạng (~20ms), còn ~1700ms để ACK về kịp.
+# Auto update next window when esp8266 send 50 packet completely
 BURST_SILENCE_MS = 300
 
 
@@ -66,7 +63,7 @@ if not os.path.exists(MODEL_PATH):
     raise FileNotFoundError(f"Không tìm thấy model: {MODEL_PATH}")
 
 checkpoint  = torch.load(MODEL_PATH, map_location=torch.device('cpu'))
-WINDOW_SIZE = int(checkpoint['seq_len'])   # đọc từ checkpoint, không hardcode
+WINDOW_SIZE = int(checkpoint['seq_len'])
 
 model = GRUClassifier(
     input_size  = checkpoint['input_size'],
@@ -110,14 +107,14 @@ def log_csv(window_id, recv, loss, delay, thr, decision, scores):
     csv_file.flush()
 
 
-# ===== Trạng thái chia sẻ =====
+
 state_lock          = threading.Lock()
 window_buffer       = deque(maxlen=WINDOW_SIZE)
 current_window_id   = None
 packets_this_window = []
 last_packet_mono    = None    # time.monotonic() của gói cuối nhận được
 window_flushed      = False   # True nếu window hiện tại đã được flush (tránh flush 2 lần)
-esp32_addr          = None
+esp8266_addr          = None
 # ===== WebSocket server =====
 WS_PORT    = 8765
 _ws_loop   = None
@@ -163,11 +160,11 @@ ack_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # ===== Hàm tiện ích =====
 def send_ack(window_id: int, decision: int):
-    if esp32_addr is None:
+    if esp8266_addr is None:
         return
     msg = struct.pack('>HB', window_id, decision)
-    ack_sock.sendto(msg, (esp32_addr[0], ESP32_PORT_ACK))
-    log(f"  ACK → {esp32_addr[0]}:{ESP32_PORT_ACK}  "
+    ack_sock.sendto(msg, (esp8266_addr[0], ESP8266_PORT_ACK))
+    log(f"  ACK → {esp8266_addr[0]}:{ESP8266_PORT_ACK}  "
         f"window={window_id}  decision={decision} ({DECISION_LABEL.get(decision, '?')})")
 
 
@@ -204,7 +201,7 @@ def compute_metrics(packets):
     last_recv = packets[-1][4]
     duration_ms = last_recv - first_recv
     if duration_ms > 0:
-        throughput_bps = total_bytes / (duration_ms / 2000.0)
+        throughput_bps = total_bytes / (duration_ms / 1000.0)
     else:
         throughput_bps = 0.0
     return packet_loss, avg_delay, throughput_bps
@@ -269,7 +266,7 @@ def do_flush(wid, packets, reason=""):
 
 
 # ===== Burst-silence detector thread =====
-# Nguyên lý: ESP32 gửi 50 gói trong ~50ms, sau đó im ~1950ms.
+# Nguyên lý: ESP8266 gửi 50 gói trong ~50ms, sau đó im ~1950ms.
 # Thread poll mỗi 20ms, phát hiện khoảng lặng >= BURST_SILENCE_MS sau khi
 # đã nhận ít nhất 1 gói trong window hiện tại → burst kết thúc → flush ngay.
 # Không phụ thuộc vào window_id, không cần heartbeat.
@@ -301,7 +298,7 @@ def silence_detector():
 # ===== Main =====
 log("=" * 60)
 log(f" RPi Controller  |  model: {MODEL_PATH}  seq_len={WINDOW_SIZE}")
-log(f" Data :{UDP_PORT_DATA}   ACK → ESP32:{ESP32_PORT_ACK}")
+log(f" Data :{UDP_PORT_DATA}   ACK → ESP32:{ESP8266_PORT_ACK}")
 log(f" Burst-silence timeout: {BURST_SILENCE_MS}ms")
 log(f" Log: {LOG_CSV}  {LOG_TXT}")
 log("=" * 60)
@@ -323,17 +320,17 @@ try:
         with state_lock:
             last_packet_mono = time.monotonic()
 
-            if esp32_addr is None:
+            if esp8266_addr is None:
 
-                esp32_addr = addr
-                log(f"Phát hiện ESP32 tại {esp32_addr[0]}:{esp32_addr[1]}")
+                esp8266_addr = addr
+                log(f"Phát hiện ESP32 tại {esp8266_addr[0]}:{esp8266_addr[1]}")
 
-            # ── SYNC ──────────────────────────────────────────────────────────
+            # SYNC
             if len(data) == 1 and data[0] == ord('S'):
                 handle_sync(addr)
                 continue
 
-            # ── Parse header ──────────────────────────────────────────────────
+            # Parse header
             parsed = parse_header(data)
             if not parsed:
                 log(f"WARN: gói không hợp lệ ({len(data)}B) từ {addr}")
@@ -341,7 +338,7 @@ try:
 
             window_id, seq, total, timestamp, payload_len = parsed
 
-            # ── Window mới bắt đầu ────────────────────────────────────────────
+            # Window mới bắt đầu
             if window_id != current_window_id:
                 # Nếu window cũ chưa được flush bởi silence_detector
                 # (ví dụ: burst sát nhau < 300ms gap), flush ngay tại đây

@@ -5,8 +5,8 @@ import numpy as np
 import csv
 # ===== Cấu hình mạng =====
 UDP_IP = "0.0.0.0"
-UDP_PORT_DATA = 4444  # RPi lắng nghe dữ liệu từ ESP32/ESP8266
-ESP8266_PORT_ACK = 5555  # ESP nhận ACK tại localPort=5555
+UDP_PORT_DATA = 4444
+ESP8266_PORT_ACK = 5555
 
 # ===== Thông số hệ thống =====
 PACKETS_PER_WINDOW = 50
@@ -26,26 +26,6 @@ sock.bind((UDP_IP, UDP_PORT_DATA))
 sock.settimeout(0.1)
 
 ack_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-# ===== Ngưỡng quyết định (khoa học, có thể điều chỉnh) =====
-# Ý nghĩa: SEND (good) – kênh tốt; COMPRESS (normal) – kênh trung bình; WAIT (bad) – kênh xấu
-LOSS_GOOD = 0.05      # 5%
-LOSS_BAD = 0.2
-DELAY_GOOD = 5.0      # ms
-DELAY_BAD = 50.0      # ms
-THROUGHPUT_GOOD = 1700.0   # Bps
-THROUGHPUT_BAD = 1100.0 # Bps
-
-DECISION_LABEL = {
-    0: "SEND",
-    1: "COMPRESS",
-    2: "WAIT"
-}
-CHANNEL_QUALITY = {
-    0: "good",
-    1: "normal",
-    2: "bad"
-}
 
 # ===== File log CSV và TXT =====
 CSV_FILENAME = "raw_metrics.csv"
@@ -112,7 +92,7 @@ def compute_metrics(packets):
     last_recv = packets[-1][4]
     duration_ms = last_recv - first_recv
     if duration_ms > 0:
-        throughput_bps = total_bytes / (duration_ms / 2000.0)
+        throughput_bps = total_bytes / (duration_ms / 1000.0)
     else:
         throughput_bps = 0.0
 
